@@ -55,5 +55,7 @@ class mlp_valen(nn.Module):
         out = self.relu2(out)
         out = self.fc3(out)
         out = self.relu3(out)
+        #In Valen this gives features and output 
+        # but I cannot see it clearly
         out = self.fc4(out)
         return  out
