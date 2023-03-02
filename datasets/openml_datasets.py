@@ -3,32 +3,28 @@
              Jesús Cid-Sueiro (Original code)
              Miquel Perelló-Nieto (Original code)
 """
-# imprting standard libraries
+#improting standard libraries
 import numpy as np
-import scipy as sp
-import itertools
-import math
-import sklearn
-from sklearn import preprocessing, ensemble, datasets
+from sklearn import preprocessing
 import sklearn.datasets as skd
+from sklearn.utils import shuffle
 
+#importing database library
 import openml
-from openml import tasks, runs
 
-# importing libraries for convex optimization
-import cvxpy
-
-# importing deep learning libraries
+# importing torch related libraries
 import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, TensorDataset
+from sklearn.model_selection import train_test_split
 
+#importing local methods
+from utils.utils_weakener import binarize_labels
 
-class Load_Dataset(Dataset):
+class OpenML_Dataset(Dataset):
     '''
     The dataloader returns a pytorch dataset
     inputs:
-        ds_id: [str/int] refers to the selected dataset
+        dataset: [str/int] refers to the selected dataset
             Synthetic datasets
             - 'hypercube'
             - 'blobs'
@@ -54,11 +50,15 @@ class Load_Dataset(Dataset):
             - TBD
     '''
 
-    def __init__(self, ds_id, shuffle=True, seed=None):
-        self.ds_id = ds_id
-        self.le = None
-        self.seed = seed
-        self.shuffle = shuffle
+    def __init__(self, dataset, train_size=0.7, batch_size=64, shuffling=True, splitting_seed=47):
+
+        self.dataset = dataset
+        self.tr_size = train_size
+        self.weak_labels = None
+        self.batch_size = batch_size
+        self.shuffle = shuffling
+        self.splitting_seed = splitting_seed
+
         openml_ids = {'iris': 61, 'pendigits': 32, 'glass': 41, 'segment': 36,
                       'vehicle': 54, 'vowel': 307, 'wine': 187, 'abalone': 1557,
                       'balance-scale': 11, 'car': 21, 'ecoli': 39, 'satimage': 182,
@@ -71,89 +71,120 @@ class Load_Dataset(Dataset):
                       'visualizing_livestock': 685, 'diggle_table_a2': 694,
                       'prnn_fglass': 952, 'confidence': 468, 'fl2000': 477,
                       'blood-transfusion': 1464, ' banknote-authentication': 1462}
-        X = None
-        y = None
-        if isinstance(ds_id, int):
-            data = openml.datasets.get_dataset(ds_id)
+        if self.dataset in openml_ids:
+            data = openml.datasets.get_dataset(openml_ids[self.dataset])
             X, y, categorical, feature_names = data.get_data(
                 target=data.default_target_attribute,
             )
             X = X.values
-            # encode target labels as values
-            self.le = preprocessing.LabelEncoder()
-            y = self.le.fit_transform(y)
-        elif ds_id == 'hypercube':
+            le = preprocessing.LabelEncoder()
+            y = le.fit_transform(y)
+            X, y = shuffle(X, y, random_state=self.splitting_seed)
+        elif isinstance(self.dataset, int):
+            data = openml.datasets.get_dataset(self.dataset)
+            X, y, categorical, feature_names = data.get_data(
+                target=data.default_target_attribute,
+            )
+            X = X.values
+            le = preprocessing.LabelEncoder()
+            y = le.fit_transform(y)
+            X, y = shuffle(X, y)
+        elif self.dataset == 'hypercube':
             X, y = skd.make_classification(
                 n_samples=400, n_features=40, n_informative=40,
                 n_redundant=0, n_repeated=0, n_classes=4,
                 n_clusters_per_class=2,
                 weights=None, flip_y=0.0001, class_sep=1.0, hypercube=True,
                 shift=0.0, scale=1.0, shuffle=True, random_state=None)
-        elif ds_id == 'blobs':
+        elif self.dataset == 'blobs':
             X, y = skd.make_blobs(
                 n_samples=400, n_features=2, centers=20, cluster_std=2,
                 center_box=(-10.0, 10.0), shuffle=True, random_state=None)
-        elif ds_id == 'blobs2':
+        elif self.dataset == 'blobs2':
             X, y = skd.make_blobs(
                 n_samples=400, n_features=4, centers=10, cluster_std=1,
                 center_box=(-10.0, 10.0), shuffle=True, random_state=None)
-        elif ds_id == 'iris':
+        elif self.dataset == 'iris':
             dataset = skd.load_iris()
             X = dataset.data
             y = dataset.target
-        elif ds_id == 'digits':
+        elif self.dataset == 'digits':
             dataset = skd.load_digits()
             X = dataset.data
             y = dataset.target
-        elif ds_id == 'covtype':
+        elif self.dataset == 'covtype':
             dataset = skd.fetch_covtype()
             X = dataset.data
             y = dataset.target - 1
-        elif ds_id == 'mnist':
-            train_dataset = torchvision.datasets.MNIST('/files/', train=True, download=True,
-                                                       transform=torchvision.transforms.Compose([
-                                                           torchvision.transforms.ToTensor(),
-                                                           torchvision.transforms.Normalize(
-                                                               (0.1307,), (0.3081,))]))
-            # [TBD]
-            X = torch.Tensor([np.array(a[0]) for a in train_dataset]).view(len(train_dataset), -1)
-            y = torch.Tensor([a[1] for a in train_dataset])
         else:
             print('TBD. Sorry for the inconvenience.')
 
-        self.n_samples = X.shape[0]
-        self.n_classes = len(np.unique(y))
+        self.num_classes = torch.max(torch.unique(torch.from_numpy(y))) + 1
+        # self.num_classes = len(np.unique(y)) # Maybe this could be better.
 
-        if self.shuffle:
-            X, y = sklearn.utils.shuffle(X, y, random_state=self.seed)
-        self.X = X
-        self.y = y
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, train_size=self.tr_size, random_state=self.splitting_seed)
+        X_train = torch.from_numpy(X_train).to(torch.float32)
+        X_test = torch.from_numpy(X_test).to(torch.float32)
+        y_train = torch.from_numpy(y_train).to(torch.long)
+        y_test = torch.from_numpy(y_test).to(torch.long)
+
+        self.train_dataset = TensorDataset(X_train, y_train)
+        self.test_dataset = TensorDataset(X_test, y_test)
+
+        # This is done to mantain coherence between de datset classes
+        self.train_dataset.data = self.train_dataset.tensors[0]
+        self.train_dataset.targets = self.train_dataset.tensors[1]
+        self.test_dataset.data = self.test_dataset.tensors[0]
+        self.test_dataset.targets = self.test_dataset.tensors[1]
+
+        self.train_num_samples = self.train_dataset.data.shape[0]
+        self.test_num_samples = self.test_dataset.data.shape[0]
+
+        self.num_features = self.train_dataset.data.shape[1]
+
+        self.train_dataset.targets = binarize_labels(self.num_classes, self.train_dataset.targets)
+        self.test_dataset.targets = binarize_labels(self.num_classes, self.test_dataset.targets)
 
     def __getitem__(self, index):
-        if self.z is None:
-            return self.X[index], self.y[index]
+        if self.weak_labels is None:
+            x = self.train_dataset.data[index]
+            y = self.train_dataset.targets[index]
+            return x, y
         else:
-            return self.X[index], self.z[index], self.y[index]
+            x = self.train_dataset.data[index]
+            w = self.weak_labels[index]
+            y = self.train_dataset.targets[index]
+            return x, w, y
 
-    def __len__(self):
-        return self.n_samples
+    def get_dataloader(self, indices=None):
+        if indices is None:
+            indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
+        print(indices)
+        if self.weak_labels is None:
+            tr_dataset = TensorDataset(self.train_dataset.data[indices],
+                                                     self.train_dataset.targets[indices])
+        else:
+            tr_dataset = TensorDataset(self.train_dataset.data[indices], self.weak_labels[indices],
+                                                     self.train_dataset.targets[indices], indices)
 
-    def __shape__(self):
-        return [self.n_samples, self.n_samples]
+        self.train_loader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=self.shuffle,
+                                                        num_workers=0)
+        self.test_loader = DataLoader(TensorDataset(
+            self.test_dataset.data, self.test_dataset.targets
+        ), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=0)
+        return self.train_loader, self.test_loader
 
-    def inverse_labels(self, labels):
-        if self.le is not None:
-            return self.le.inverse_transform(labels)
+    def get_data(self):
+        train_x = self.train_dataset.data
+        train_y = self.train_dataset.targets
+        test_x = self.test_dataset.data
+        test_y = self.test_dataset.targets
+
+        return train_x, train_y, test_x, test_y
 
     def include_weak(self, z):
-        self.z = z
-
-    def generate_loaders(self, train_size, batch_size=1, shuffle=False):
-        if train_size < 1:
-            tr_s = int(len(dataset)*0.5)
-        te_s = self.n_samples - tr_s
-        trainloader = DataLoader(dataset=dataset[:tr_s], batch_size=batch_size, shuffle=shuffle)
-        testloader = DataLoader(dataset = dataset[tr_s:], batch_size = batch_size, shuffle = shuffle)
-        train_ds = torch.utils.data.random_split(dataset, [30, 120], generator=torch.Generator().manual_seed(42))
-        test_ds = torch.utils.data.random_split(dataset, [30, 120], generator=torch.Generator().manual_seed(42))
-        return train_ds, test_ds, trainloader, testloader
+        if torch.is_tensor(z):
+            self.weak_labels = z
+        else:
+            self.weak_labels = torch.from_numpy(z)

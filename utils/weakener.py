@@ -6,7 +6,8 @@
 """
 import numpy as np
 import torch
-from utils.utils_weakener import label_matrix, pll_weights,binarize_labels
+import cvxpy
+from utils.utils_weakener import label_matrix, pll_weights, binarize_labels
 
 
 class Weakener(object):
@@ -15,41 +16,31 @@ class Weakener(object):
     with the actual labels.
     '''
 
-    def __init__(self, true_classes, M=None):
+    def __init__(self, true_classes):
         '''
         Types of corruptions supported are:
         Given by a mixing matrix
             - Supervised
-            Noise
-            - PU
+            Noise (d=c)
+            - PU (c=2)
             - Complementary
             - Noisy
             Weak
-            - IPL
+            - Weak
             - PLL (with and without anchor points)
-            -
+            - Complementary_weak
         Dependent on the sample [TBD]
             - See papers of this (how this works), maybe include some relaxations in M
 
         '''
         # This is for a matrix given by the user.
         self.c = true_classes
-        if M is not None:
-            r, c = M.shape
-            if c != self.c:
-                raise NameError('The transition matrix given doesnt suit the number of true classes')
-            else:
-                self.M = M
-        else:
-            self.M = None
+        self.M = None
 
-    def Load_M(self, M):
-        '''
-        User given transition matrix
-        '''
-        self.M = M
+        self.z = None
+        self.w = None
 
-    def generate_M(self, alpha=1, beta=None, model_class='supervised'):
+    def generate_M(self,  model_class='supervised', alpha=1, beta=None):
         '''
         Generates a corruption matrix (a transition matrix)
 
@@ -69,10 +60,13 @@ class Weakener(object):
                 alpha = [alpha, 0]
             M = np.eye(2) + alpha * np.ones((2, 2))
             M /= np.sum(M, 0)
-            self.M = M
+            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M = M
         # c = d
         elif model_class == 'supervised':
-            self.M = np.identity(self.c)
+            M = np.identity(self.c)
+            #self.M, self.Z, self.labels = label_matrix(M)
+
         elif model_class == 'noisy':
             '''
             - alpha > -1
@@ -93,13 +87,16 @@ class Weakener(object):
                 # warning('Some (or all) of the components is considered as complemetary labels')
             M = np.eye(self.c) + alpha * np.ones(self.c)
             M /= np.sum(M, 0)
-            self.M = M
+            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M = M
 
         elif model_class == 'complementary':
             '''
             This gives one of de non correct label 
             '''
-            self.M = (1 - np.eye(c)) / (c - 1)
+            M = (1 - np.eye(c)) / (c - 1)
+            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M = M
 
         # c < d
         elif model_class == 'weak':
@@ -126,7 +123,8 @@ class Weakener(object):
                 M[2 ** i, i] = 1
             M = alpha * M + np.ones((2 ** self.c, self.c))
             M /= np.sum(M, 0)
-            self.M = M
+            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M = M
 
 
         elif model_class == 'pll':
@@ -135,7 +133,7 @@ class Weakener(object):
             probs, Z = pll_weights(self.c, p=0.5)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
-            self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = label_matrix(M)
 
         elif model_class == 'pll_a':
             # Mixing matrix for making pll corruption similar to that in
@@ -143,8 +141,7 @@ class Weakener(object):
             probs, Z = pll_weights(self.c, p=0.5, anchor_points=True)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
-            print(M)
-            self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = label_matrix(M)
 
         elif model_class == 'Complementary_weak':
             '''
@@ -152,55 +149,65 @@ class Weakener(object):
             '''
             # [TBD]
             return _
+        self.M, self.Z, self.labels = label_matrix(M)
 
     def generate_weak(self, y, seed=None):
         # It should work with torch
         # the version of np.random.choice changed in 1.7.0 that could raise an error-
         d, c = self.M.shape
         # [TBD] include seed
-        p_Y = torch.Tensor([np.random.choice(d, p=self.M[:, tl]) for tl in torch.max(y, axis=1)[1]])
+        self.z = torch.Tensor([np.random.choice(d, p=self.M[:, tl]) for tl in torch.max(y, axis=1)[1]]).to(torch.int32)
 
-        p_Y_oh = torch.from_numpy(self.Z[p_Y.to(torch.int32)] + 0.)
-        return p_Y, p_Y_oh
+        self.w = torch.from_numpy(self.Z[self.z.to(torch.int32)] + 0.)
+        return self.z, self.w
 
-    #         d, c = self.M.shape
-    #         wl = np.arange(self.c)
-    #         # [TBD] include seed
-    #         return np.array([np.random.choice(wl, p=self.M[:, tl]) for tl in y])
-
-    def binarize_labels(self, ):  # I have another binarize in another place
-        return ()
-
-    def weak_dataset(self, X=None, y=None, z=None, Dataset=None, batch_size=None, seed=None):
-        '''
-        Receives either a pytorch dataset with the true classes or a feature matrix, X and a label vector y
-        And returns a Dataset with three instances in order to make the training and the test
-        '''
-        if z is None:
-            z = weak.generate_weak(y, seed=None)
-        if Dataset is None:
-            weak_dataset = torch.utils.data.TensorDataset(torch.tensor(X), torch.tensor(z), torch.tensor(y))
-        weak_loader = torch.utils.data.DataLoader(weak_dataset, batch_size=batch_size, shuffle=True)
-
-        if batch_size is None:
-            return weak_dataset
-        else:
-            return weak_loader
-
-    # def train_test(self, dataset, train_prop = 0.7):
-    #    train_set, val_set = torch.utils.data.random_s plit(dataset, [50000, 10000])
 
     def virtual_matrix(self, p=None, convex=True):
         d, c = self.M.shape
-        if p is None:
-            p = np.ones(d)
-            p /= np.sum(p)
-        d1 = np.ones(d)
+        I_c = np.eye(c)
+        if p == None:
+            p = np.ones(d)/d
+        c_1 = np.ones((c,1))
+        d_1 = np.ones((d,1))
 
-        if d == c:
-            # we could use inv, when generated by Generate_M we'll never have a singular matrix
-            # but when given by user it could be.
-            Y = np.linalg.pinv(self.M)
+        hat_Y = cvxpy.Variable((c,d))
+
+        if c==d:
+            self.Y = np.linalg.pinv(self.M)
+        elif convex:
+            prob = cvxpy.Problem(cvxpy.Minimize(
+                cvxpy.norm(cvxpy.hstack([cvxpy.norm(hat_Y[:, i])**2 * p[i] for i in range(d)]),1)
+            ),
+                [hat_Y @ self.M == I_c, hat_Y.T @ c_1 == d_1]
+            )
+            prob.solve()
+            self.Y = hat_Y.value
         else:
-            # [TBD] Include the different reconstructions
-            Y = np.linalg.pinv(self.M)
+            prob = cvxpy.Problem(cvxpy.Minimize(
+                cvxpy.norm(cvxpy.hstack([cvxpy.norm(hat_Y[:, i])**2 * p[i] for i in range(d)]),1)
+            ),
+                [hat_Y @ self.M == I_c]
+            )
+            prob.solve()
+            self.Y = hat_Y.value
+
+
+    def virtual_labels(self, y = None):
+        '''
+        z must be the weak label in the z form given by generate weak
+        '''
+        #In order to not generate weak labels each time we seek the existence of them
+        # and in the case they are already generated we dont generate them again
+        if self.z is None:
+            if y is None:
+                raise NameError('The weak labels have not been yet created. You shuold give the true labels. Try:\n  class.virtual_labels(y)\n instead')
+            _,_ = self.generate_weak(y)
+        self.virtual_matrix()
+        self.v = self.Y.T[self.z]
+        return
+
+    def generate_wl_priors(self,z):
+        if self.z is None:
+            _,_ = self.generate_weak(y, seed=seed)
+
+
