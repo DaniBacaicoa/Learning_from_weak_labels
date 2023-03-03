@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 def partial_loss(output,target,true,eps=1e-12):
-    out = F.softmax(output)
+    out = F.softmax(output,dim=1)
     l = target * torch.log(out+eps)
     loss = -torch.sum(l)/l.size(0)
 
@@ -41,11 +41,11 @@ class BrierLoss(nn.Module):
 class LBLoss(nn.Module):
     def __init__(self, weight=None, size_average=True):
         super(LBLoss, self).__init__()
-        self.softmax = torch.nn.Softmax(dim = 1)
+        self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
     def forward(self, inputs, targets, k=1, beta=1):
         v = inputs - torch.mean(inputs, axis=1, keepdims=True)
-        logp = self.softmax(v)
+        logp = self.logsoftmax(v)
         L = - torch.sum(targets * logp) + k * torch.sum(torch.abs(v) ** beta)
         return L
 
@@ -60,3 +60,26 @@ class EMLoss(nn.Module):
         v = inputs  # - torch.mean(inputs, axis=1, keepdims=True)
         p = self.softmax(v)
         Q = p * M[tor]
+
+class OSLCELoss(nn.Module):
+    def __init__(self):
+        super(OSLCELoss, self).__init__()
+        self.softmax = torch.nn.softmax(dim = 1)
+
+    def forward(self, inputs, targets):
+        p = self.softmax(inputs)
+        D = self.hardmax(targets*p)
+        L = - torch.sum(D*logp)
+        return L
+
+
+class OSLBrierLoss(nn.Module):
+    def __init__(self):
+        super(OSLBrierLoss, self).__init__()
+        self.softmax = torch.nn.softmax(dim=1)
+
+    def forward(self, inputs, targets):
+        p = self.softmax(inputs)
+        D = self.hardmax(targets * p)
+        L = torch.sum((D - p)**2)/2
+        return L
