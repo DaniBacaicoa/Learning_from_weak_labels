@@ -3,6 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+
+
+
+#Partial loss from PRODEN (Progressive identification of True labels for PLL
+
 def partial_loss(output,target,true,eps=1e-12):
     out = F.softmax(output,dim=1)
     l = target * torch.log(out+eps)
@@ -14,6 +19,26 @@ def partial_loss(output,target,true,eps=1e-12):
     revisedY = revisedY / revisedY.sum(dim=1).repeat(revisedY.size(1),1).transpose(0,1)
 
     return loss, revisedY
+
+
+class PartialLoss(nn.Module):
+    def __init__(self, weak_labels):
+        super(PartialLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax()
+        self.weak_labels = weak_labels
+        self.weights = weak_labels/torch.sum(weak_labels, dim=1, keepdim=True)
+
+
+    def forward(self, output, targets, indices):
+        v = output - torch.mean(output, axis=1, keepdims=True)
+        logp = self.logsoftmax(v)
+        L = - torch.sum(self.weights[indices] * targets * logp)
+
+         # Updating used weights in each batch
+        new_weights = self.weak_labels[indices] * output
+        self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
+        return L
+
 
 
 class CELoss(nn.Module):

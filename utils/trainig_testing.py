@@ -1,5 +1,6 @@
 import torch
 import pickle
+import inspect
 
 def train_model(model,trainloader, optimizer, loss_fn, num_epochs):
     # Set the model to training mode
@@ -16,10 +17,13 @@ def train_model(model,trainloader, optimizer, loss_fn, num_epochs):
         correct = 0
 
         # Iterate over the training batches
-        for inputs, vl, trues, _ in trainloader:
+        for inputs, vl, trues, ind in trainloader:
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = loss_fn(outputs, vl)
+            if len(inspect.getfullargspec(loss_fn.forward).args)>3:
+                loss = loss_fn(outputs, vl,ind)
+            else:
+                loss = loss_fn(outputs, vl)
             loss.backward()
             optimizer.step()
 

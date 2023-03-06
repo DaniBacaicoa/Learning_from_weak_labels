@@ -160,7 +160,7 @@ class OpenML_Dataset(Dataset):
     def get_dataloader(self, indices=None):
         if indices is None:
             indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
-        print(indices)
+        #print(indices)
         if self.weak_labels is None:
             tr_dataset = TensorDataset(self.train_dataset.data[indices],
                                                      self.train_dataset.targets[indices])
