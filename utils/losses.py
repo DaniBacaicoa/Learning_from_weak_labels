@@ -32,7 +32,7 @@ class PartialLoss(nn.Module):
     def forward(self, output, targets, indices):
         v = output - torch.mean(output, axis=1, keepdims=True)
         logp = self.logsoftmax(v)
-        L = - torch.sum(self.weights[indices] * targets * logp)
+        L = - torch.sum(self.weights[indices].detach() * targets * logp)
 
          # Updating used weights in each batch
         new_weights = self.weak_labels[indices] * output
