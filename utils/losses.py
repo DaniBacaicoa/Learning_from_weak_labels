@@ -35,7 +35,8 @@ class PartialLoss(nn.Module):
         L = - torch.sum(self.weights[indices].detach() * targets * logp)
 
          # Updating used weights in each batch
-        new_weights = self.weak_labels[indices].detach() * output.clone().detach()
+        #new_weights = self.weak_labels[indices].detach() * output.clone().detach()
+        new_weights = self.weak_labels[indices].detach() * torch.exp(logp).clone().detach()
         self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
         return L
 
