@@ -85,11 +85,14 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
         correct = 0
 
         # Iterate over the training batches
-        for inputs, vl, targets, _ in trainloader:
+        for inputs, vl, targets, ind in trainloader:
             optimizer.zero_grad()
             outputs = model(inputs)
-
-            loss = loss_fn(outputs, vl)
+            if len(inspect.getfullargspec(loss_fn.forward).args)>3:
+                loss = loss_fn(outputs, vl, ind)
+            else:
+                loss = loss_fn(outputs, vl)
+            #loss = loss_fn(outputs, vl)
             loss.backward()
             optimizer.step()
 

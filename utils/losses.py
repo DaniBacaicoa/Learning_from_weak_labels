@@ -35,9 +35,20 @@ class PartialLoss(nn.Module):
         L = - torch.sum(self.weights[indices].detach() * targets * logp)
 
          # Updating used weights in each batch
-        new_weights = self.weak_labels[indices] * output
+        new_weights = self.weak_labels[indices].detach() * output.clone().detach()
         self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
         return L
+
+'''
+tbd. try to use this as a counterpart to hardmax
+class GumbelLoss(nn.Module):
+    #this tries to soften the constraint imposed by the non-differentiability of the minimum
+    def __init__(self,tau = 0.1:
+        super(GumbelLoss, self).__init__()
+        self.tau = tau
+
+    def forward(self, output, targets):
+'''
 
 
 
@@ -89,22 +100,25 @@ class EMLoss(nn.Module):
 class OSLCELoss(nn.Module):
     def __init__(self):
         super(OSLCELoss, self).__init__()
-        self.softmax = torch.nn.softmax(dim = 1)
+        self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
     def forward(self, inputs, targets):
-        p = self.softmax(inputs)
-        D = self.hardmax(targets*p)
+        p = torch.exp(self.logsoftmax(inputs))
+        D = self.hardmax(targets * p)
         L = - torch.sum(D*logp)
         return L
 
+def hardmax(A):
+    D = torch.eq(A,torch.max(A,axis=1,keepdims=True)[0])
+    return D/torch.sum(D,axis=1,keepdims=True)
 
 class OSLBrierLoss(nn.Module):
     def __init__(self):
         super(OSLBrierLoss, self).__init__()
-        self.softmax = torch.nn.softmax(dim=1)
+        self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
     def forward(self, inputs, targets):
-        p = self.softmax(inputs)
-        D = self.hardmax(targets * p)
+        p = torch.exp(self.logsoftmax(inputs))
+        D = hardmax(targets * p)
         L = torch.sum((D - p)**2)/2
         return L
