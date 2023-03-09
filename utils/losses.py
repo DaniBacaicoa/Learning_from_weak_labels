@@ -102,23 +102,28 @@ class OSLCELoss(nn.Module):
         super(OSLCELoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
+    def hardmax(self, A):
+        D = torch.eq(A, torch.max(A, axis=1, keepdims=True)[0])
+        return D / torch.sum(D, axis=1, keepdims=True)
+
     def forward(self, inputs, targets):
-        p = torch.exp(self.logsoftmax(inputs))
+        logp = self.logsoftmax(inputs)
+        p = torch.exp(logp)
         D = self.hardmax(targets * p)
         L = - torch.sum(D*logp)
         return L
-
-def hardmax(A):
-    D = torch.eq(A,torch.max(A,axis=1,keepdims=True)[0])
-    return D/torch.sum(D,axis=1,keepdims=True)
 
 class OSLBrierLoss(nn.Module):
     def __init__(self):
         super(OSLBrierLoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
+    def hardmax(self, A):
+        D = torch.eq(A, torch.max(A, axis=1, keepdims=True)[0])
+        return D / torch.sum(D, axis=1, keepdims=True)
+
     def forward(self, inputs, targets):
         p = torch.exp(self.logsoftmax(inputs))
-        D = hardmax(targets * p)
+        D = self.hardmax(targets * p)
         L = torch.sum((D - p)**2)/2
         return L
