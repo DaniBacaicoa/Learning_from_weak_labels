@@ -1,32 +1,36 @@
 import torch
 import numpy as np
 
-def label_matrix(M, give_M=True):
+def label_matrix(M):
     '''
 
     :param M:
     :param give_M:
     :return:
     '''
-    labels = {}
+
     Z = []
     trimmed_M = []
-    z_row = M.any(axis=1)
+
     d, c = M.shape
     e = 0
-
-    for i in range(2 ** c):
-        if z_row[i]:
-            b = bin(i)[2:]
-            b = str(0) * (c - len(b)) + b  # this makes them same length
-            labels[e] = b
-            e += 1
-            Z.append(list(map(int, list(b))))
-            trimmed_M.append(M[i, :])
-    if give_M:
-        return np.array(trimmed_M), np.array(Z), labels
+    if d == c:
+        labels = dict((a, ''.join([[str(ele) for ele in sub] for sub
+                                   in np.eye(c, dtype=int).tolist()][a])) for a in range(c))
+        trimmed_M = M
+        Z = M
     else:
-        return np.array(Z)
+        z_row = M.any(axis=1)
+        labels = {}
+        for i in range(2 ** c):
+            if z_row[i]:
+                b = bin(i)[2:]
+                b = str(0) * (c - len(b)) + b  # this makes them same length
+                labels[e] = b
+                e += 1
+                Z.append(list(map(int, list(b))))
+                trimmed_M.append(M[i, :])
+    return np.array(trimmed_M), np.array(Z), labels
 
 
 def pll_weights(c, p=0.5, anchor_points=False):
@@ -37,7 +41,7 @@ def pll_weights(c, p=0.5, anchor_points=False):
     :param anchor_points: Whether presence of anchor points are allowed
     :return:
     '''
-    Z = label_matrix(np.ones((2 ** c, c)), give_M=False)
+    _,Z,_ = label_matrix(np.ones((2 ** c, c)))
     probs = {0: 0}
     q = 1 - p
     for i in range(1, c + 1):
