@@ -209,7 +209,7 @@ class Weakener(object):
         if self.z is None:
             _,_ = self.generate_weak(y, seed=seed)
 
-    def label_matrix(M):
+    def label_matrix(self, M):
         '''
 
         :param M:
@@ -240,23 +240,23 @@ class Weakener(object):
                     trimmed_M.append(M[i, :])
         return np.array(trimmed_M), np.array(Z), labels
 
-    def pll_weights(c, p=0.5, anchor_points=False):
+    def pll_weights(self, p=0.5, anchor_points=False):
         '''
 
-        :param c:
+        :param self.c:
         :param p:
         :param anchor_points: Whether presence of anchor points are allowed
         :return:
         '''
-        _, Z, _ = self.label_matrix(np.ones((2 ** c, c)))
+        _, Z, _ = self.label_matrix(np.ones((2 ** self.c, self.c)))
         probs = {0: 0}
         q = 1 - p
-        for i in range(1, c + 1):
+        for i in range(1, self.c + 1):
             if anchor_points:
-                probs[1] = q ** c + p * q ** (c - 1)
-                probs[2] = p ** 2 * q ** (c - 2) + p * q ** (c - 1)
+                probs[1] = q ** self.c + p * q ** (self.c - 1)
+                probs[2] = p ** 2 * q ** (self.c - 2) + p * q ** (self.c - 1)
             else:
                 probs[1] = 0
-                probs[2] = p ** 2 * q ** (c - 2) + p * q ** (c - 1) + (q ** c + p * q ** (c - 1)) / (c - 1)
-            probs[i] = p ** i * q ** (c - i) + p ** (i - 1) * q ** (c - i + 1)
+                probs[2] = p ** 2 * q ** (self.c - 2) + p * q ** (self.c - 1) + (q ** self.c + p * q ** (self.c - 1)) / (self.c - 1)
+            probs[i] = p ** i * q ** (self.c - i) + p ** (i - 1) * q ** (self.c - i + 1)
         return probs, np.array(Z)
