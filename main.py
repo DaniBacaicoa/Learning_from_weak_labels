@@ -1,17 +1,17 @@
 import torch
 from copy import deepcopy
 from datasets.benchmark import Bk_Dataset
-from datasets.openml_datasets import Load_Dataset
+from datasets.openml_datasets import OpenML_Dataset
 from utils.weakener import Weakener
-from utils.warm_up import warm_up_benchmark
 from models.benchmark_mlp import mlp_feature,mlp_phi
-from utils.args import parse_args
+from utils import losses
+from utils.arguments import argument_parser
 
-args = parse_args()
-device = torch.device('cuda:'+str(args.gpu) if torch.cuda.is_available() else 'cpu')
+args = argument_parser()
+#device = torch.device('cuda:'+str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
 
-
+args.
 
 
 
@@ -21,7 +21,16 @@ device = torch.device('cuda:'+str(args.gpu) if torch.cuda.is_available() else 'c
 
 
 if __name__ == "__main__":
-    if args.dt == "benchmark":
-        benchmark(args)
-    if args.dt == "open_ml":
-        weaklabes(args)
+    try:
+        DS = Bk_Dataset(args.ds)
+    except TypeError:
+        DS = OpenML_Dataset(args.ds)
+
+    optimizer_class = getattr(torch.optim, args.optim)
+    optimizer = optimizer_class(**args.optim_params)
+
+    loss_class = getattr(losses,args.loss)
+    if args.loss == 'LBLoss':
+        loss_fn = loss_class(args.lbl_params)
+
+
