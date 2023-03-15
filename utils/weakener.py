@@ -7,7 +7,6 @@
 import numpy as np
 import torch
 import cvxpy
-from utils.utils_weakener import label_matrix, pll_weights, binarize_labels
 
 
 class Weakener(object):
@@ -60,12 +59,12 @@ class Weakener(object):
                 alpha = [alpha, 0]
             M = np.eye(2) + alpha * np.ones((2, 2))
             M /= np.sum(M, 0)
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
             #self.M = M
         # c = d
         elif model_class == 'supervised':
             M = np.identity(self.c)
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
 
         elif model_class == 'noisy':
             '''
@@ -87,7 +86,7 @@ class Weakener(object):
                 # warning('Some (or all) of the components is considered as complemetary labels')
             M = np.eye(self.c) + alpha * np.ones(self.c)
             M /= np.sum(M, 0)
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
             #self.M = M
 
         elif model_class == 'complementary':
@@ -95,7 +94,7 @@ class Weakener(object):
             This gives one of de non correct label 
             '''
             M = (1 - np.eye(c)) / (c - 1)
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
             #self.M = M
 
         # c < d
@@ -123,7 +122,7 @@ class Weakener(object):
                 M[2 ** i, i] = 1
             M = alpha * M + np.ones((2 ** self.c, self.c))
             M /= np.sum(M, 0)
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
             #self.M = M
 
 
@@ -133,7 +132,7 @@ class Weakener(object):
             probs, Z = self.pll_weights(self.c, p=0.5)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
 
         elif model_class == 'pll_a':
             # Mixing matrix for making pll corruption similar to that in
@@ -141,7 +140,7 @@ class Weakener(object):
             probs, Z = self.pll_weights(self.c, p=0.5, anchor_points=True)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
-            #self.M, self.Z, self.labels = label_matrix(M)
+            #self.M, self.Z, self.labels = self.label_matrix(M)
 
         elif model_class == 'Complementary_weak':
             '''
@@ -149,7 +148,7 @@ class Weakener(object):
             '''
             # [TBD]
             return _
-        self.M, self.Z, self.labels = label_matrix(M)
+        self.M, self.Z, self.labels = self.label_matrix(M)
 
     def generate_weak(self, y, seed=None):
         # It should work with torch
