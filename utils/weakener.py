@@ -39,7 +39,7 @@ class Weakener(object):
         self.z = None
         self.w = None
 
-    def generate_M(self,  model_class='supervised', alpha=1, beta=None):
+    def generate_M(self,  model_class='supervised', alpha=1, beta=None,pll_p = 0.5):
         '''
         Generates a corruption matrix (a transition matrix)
 
@@ -51,6 +51,7 @@ class Weakener(object):
         beta
         model_class
         '''
+        self.pll_p = pll_p
         # with fixed size c=2
         if model_class == 'pu':
             if self.c > 2:
@@ -129,7 +130,7 @@ class Weakener(object):
         elif model_class == 'pll':
             # Mixing matrix for making pll corruption similar to that in
             # Instance-Dependent PLL (Xu, et al. 2021)
-            probs, Z = self.pll_weights(self.c, p=0.5)  # Take this probability from argparse
+            probs, Z = self.pll_weights(p=self.pll_p)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
             #self.M, self.Z, self.labels = self.label_matrix(M)
@@ -137,7 +138,7 @@ class Weakener(object):
         elif model_class == 'pll_a':
             # Mixing matrix for making pll corruption similar to that in
             # Instance-Dependent PLL (Xu, et al. 2021) they don't allow anchor points but this method does.
-            probs, Z = self.pll_weights(self.c, p=0.5, anchor_points=True)  # Take this probability from argparse
+            probs, Z = self.pll_weights(p=self.pll_p, anchor_points=True)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
             #self.M, self.Z, self.labels = self.label_matrix(M)

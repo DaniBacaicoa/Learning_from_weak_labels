@@ -1,24 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-
-
-
-
-#Partial loss from PRODEN (Progressive identification of True labels for PLL
-
-def partial_loss(output,target,true,eps=1e-12):
-    out = F.softmax(output,dim=1)
-    l = target * torch.log(out+eps)
-    loss = -torch.sum(l)/l.size(0)
-
-    revisedY = target.clone()
-    revisedY[revisedY > 0] = 1
-    revisedY = revisedY * (out.clone().detach())
-    revisedY = revisedY / revisedY.sum(dim=1).repeat(revisedY.size(1),1).transpose(0,1)
-
-    return loss, revisedY
 
 
 class PartialLoss(nn.Module):
@@ -54,7 +35,7 @@ class GumbelLoss(nn.Module):
 
 
 class CELoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    def __init__(self):
         super(CELoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim=1)
 
@@ -65,7 +46,7 @@ class CELoss(nn.Module):
         return L
 
 class BrierLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    def __init__(self):
         super(BrierLoss, self).__init__()
         self.softmax = torch.nn.Softmax(dim=1)
 
@@ -76,14 +57,17 @@ class BrierLoss(nn.Module):
         return L
 
 class LBLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    def __init__(self, k=1, beta=1):
         super(LBLoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
+        self.k = k
+        self.beta = beta
 
-    def forward(self, inputs, targets, k=1, beta=1):
+
+    def forward(self, inputs, targets):
         v = inputs - torch.mean(inputs, axis=1, keepdims=True)
         logp = self.logsoftmax(v)
-        L = - torch.sum(targets * logp) + k * torch.sum(torch.abs(v) ** beta)
+        L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
         return L
 
 class EMLoss(nn.Module):

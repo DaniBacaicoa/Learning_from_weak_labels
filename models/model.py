@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0):
+    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = False):
         super().__init__()
 
         # Create a list of layer sizes
@@ -24,12 +24,14 @@ class MLP(nn.Module):
 
         # Create a dropout layer
         self.dropout = nn.Dropout(dropout_p)
+        self.bn = bn
 
     def forward(self, x):
         # Iterate over the linear layers and apply them sequentially to the input
         for i in range(len(self.layers)-1):
             x = self.layers[i](x)
-            x = self.batch_norms[i](x)
+            if self.bn:
+                x = self.batch_norms[i](x)
             x = nn.functional.relu(x)
             x = self.dropout(x)
         # Apply the final linear layer to get the output

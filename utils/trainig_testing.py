@@ -2,7 +2,7 @@ import torch
 import pickle
 import inspect
 
-def train_model(model,trainloader, optimizer, loss_fn, num_epochs):
+def train_model(model,trainloader, optimizer, loss_fn, num_epochs, return_model=False):
     # Set the model to training mode
     model.train()
 
@@ -41,8 +41,10 @@ def train_model(model,trainloader, optimizer, loss_fn, num_epochs):
         train_losses[epoch] = epoch_loss
         train_accs[epoch] = epoch_acc
         print('Epoch {}/{} - Loss: {:.4f} - Accuracy: {:.4f}'.format(epoch+1, num_epochs, epoch_loss, epoch_acc))
-
-    return train_losses, train_accs
+    if return_model:
+        return train_losses, train_accs, model
+    else:
+        return train_losses, train_accs
 
 def evaluate_model(model, testloader, sound = True):
     # Set the model to evaluation mode
