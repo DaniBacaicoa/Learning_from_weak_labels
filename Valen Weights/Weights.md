@@ -1,0 +1,1 @@
+This is simply the weights put by the authors of Valen
