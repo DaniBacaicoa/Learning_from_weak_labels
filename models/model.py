@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = False):
+    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = False, activation='relu')):
         super().__init__()
 
         # Create a list of layer sizes
@@ -25,6 +25,7 @@ class MLP(nn.Module):
         # Create a dropout layer
         self.dropout = nn.Dropout(dropout_p)
         self.bn = bn
+        self.activation = activation
 
     def forward(self, x):
         # Iterate over the linear layers and apply them sequentially to the input
@@ -32,7 +33,9 @@ class MLP(nn.Module):
             x = self.layers[i](x)
             if self.bn:
                 x = self.batch_norms[i](x)
-            x = nn.functional.relu(x)
+            #x = nn.functional.relu(x)
+            activation_fn = getattr(nn.functional, self.activation)
+            x = activation_fn(x)
             x = self.dropout(x)
         # Apply the final linear layer to get the output
         x = self.layers[-1](x)
@@ -61,3 +64,11 @@ class mlp_valen(nn.Module):
         # but I cannot see it clearly
         out = self.fc4(out)
         return  out
+
+# Instantiating MLP like this we can get the mlp_valen architecture
+# mlp_valen = MLP(input_size=input_dim,
+#                  hidden_sizes=[hidden_dim, hidden_dim, hidden_dim],
+#                  output_size=output_dim,
+#                  dropout_p=0.0,
+#                  bn=False,
+#                  activation='relu')
