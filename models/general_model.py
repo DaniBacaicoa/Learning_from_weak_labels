@@ -25,12 +25,12 @@ class MLP(nn.Module):
 
         # We create a list of batch normalization layers and initialize their weights
         if self.bn:
-        self.batch_norms = nn.ModuleList([
-            nn.BatchNorm1d(layer_sizes[i + 1], momentum = bn_momentum)
-            for i in range(len(hidden_sizes))
-        ])
-        for bn in self.batch_norms:
-            bn_init(bn.weight)
+            self.batch_norms = nn.ModuleList([
+                nn.BatchNorm1d(layer_sizes[i + 1], momentum = bn_momentum)
+                for i in range(len(hidden_sizes))
+            ])
+            for bn in self.batch_norms:
+                bn_init(bn.weight)
 
         # Create a dropout layer
         self.dropout = nn.Dropout(dropout_p)
