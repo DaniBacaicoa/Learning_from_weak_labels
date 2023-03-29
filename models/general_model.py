@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+
 
 class MLP(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = True,
@@ -53,7 +55,7 @@ class MLP(nn.Module):
 ## Benchmark models [nmist,knmist,fnmist]
 ##    Partialization =  rand (instance independent), they use mlp_feature that can be generated instantiating MLP as:
 ##      mlp_feature = MLP(input_dim, [hidden_dim, hidden_dim, hidden_dim], output_dim, dropout_p = 0.0, bn = False, seed = 1,
-##             layer_init = lambda x: nn.init.kaiming_uniform_(x, a=math.sqrt(5))
+##             layer_init = lambda x: nn.init.kaiming_uniform_(x, a=math.sqrt(5)))
 ## Benchmark models [nmist,knmist,fnmist]
 ##    Partialization =  feature (instance dependent), they use mlp_phi that can be generated instantiating MLP as:
 ##       mlp_phi = MLP(input_dim, hidden_sizes=[300, 301, 302, 303],  output_dim, dropout_p = 0.0, seed = 1)
