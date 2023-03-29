@@ -2,24 +2,53 @@ import torch
 import torch.nn as nn
 
 
-class PartialLoss(nn.Module):
+class PartialLoss2(nn.Module):
     def __init__(self, weak_labels):
         super(PartialLoss, self).__init__()
-        self.logsoftmax = nn.LogSoftmax()
-        self.weak_labels = weak_labels
-        self.weights = weak_labels/torch.sum(weak_labels, dim=1, keepdim=True)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.Softmax(dim=1)
+        self.weak_labels = weak_labels.detach()
+        self.weights = (weak_labels/torch.sum(weak_labels, dim=1, keepdim=True)).detach()
 
 
     def forward(self, output, targets, indices):
-        v = output - torch.mean(output, axis=1, keepdims=True)
-        logp = self.logsoftmax(v)
-        L = - torch.sum(self.weights[indices].detach() * targets * logp)
+        #v = output - torch.mean(output, axis=1, keepdims=True)
+        p = self.softmax(output)
+        L = - torch.sum(self.weights[indices] * targets * logp)
 
         # Updating used weights in each batch
-        #new_weights = self.weak_labels[indices].detach() * output.clone().detach()
-        new_weights = self.weak_labels[indices].detach() * torch.exp(logp).clone().detach()
+        new_weights = self.weak_labels[indices] * output.clone().detach()
+        #new_weights = self.weak_labels[indices] * torch.exp(logp)
         self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
         return L
+
+class PartialLoss(nn.Module):
+    def __init__(self, weak_labels):
+        super(PartialLoss, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+        self.weak_labels = weak_labels.detach()
+        self.weights = (self.weak_labels / torch.sum(self.weak_labels, dim=1, keepdim=True))
+
+    def forward(self,output,targets,indices):
+        v = output - torch.mean(output, axis=1, keepdims=True)
+        p = self.softmax(output)
+        L = -torch.sum(self.weights[indices] * torch.log(p+1e-12))/len(indices)
+
+        revisedY = self.weights[indices].clone()
+        revisedY[revisedY > 0] = 1
+        revisedY = revisedY * p.clone().detach()
+        revisedY = revisedY / revisedY.sum(dim=1).repeat(revisedY.size(1), 1).transpose(0, 1)
+
+        self.weights[indices] = revisedY
+
+        return L
+
+
+
+
+
+
+
 
 '''
 tbd. try to use this as a counterpart to hardmax
