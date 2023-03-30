@@ -50,11 +50,12 @@ class OpenML_Dataset(Dataset):
             - TBD
     '''
 
-    def __init__(self, dataset, train_size=0.7, batch_size=64, shuffling=True, splitting_seed=47):
+    def __init__(self, dataset, train_size=0.7, batch_size=64, shuffling=False, splitting_seed=47):
 
         self.dataset = dataset
         self.tr_size = train_size
         self.weak_labels = None
+        self.virtual_labels = None
         self.batch_size = batch_size
         self.shuffle = shuffling
         self.splitting_seed = splitting_seed
@@ -119,8 +120,8 @@ class OpenML_Dataset(Dataset):
         else:
             print('TBD. Sorry for the inconvenience.')
 
-        self.num_classes = torch.max(torch.unique(torch.from_numpy(y))) + 1
-        # self.num_classes = len(np.unique(y)) # Maybe this could be better.
+        #self.num_classes = torch.max(torch.unique(torch.from_numpy(y))) + 1
+        self.num_classes = len(np.unique(y)) # Maybe this could be better.
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, train_size=self.tr_size, random_state=self.splitting_seed)

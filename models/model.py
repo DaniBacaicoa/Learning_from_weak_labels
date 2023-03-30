@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = False, activation='relu')):
+    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = False, activation='relu'):
         super().__init__()
 
         # Create a list of layer sizes

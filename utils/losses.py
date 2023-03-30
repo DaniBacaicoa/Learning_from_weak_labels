@@ -31,7 +31,7 @@ class PartialLoss(nn.Module):
 
     def forward(self,output,targets,indices):
         v = output - torch.mean(output, axis=1, keepdims=True)
-        p = self.softmax(output)
+        p = self.softmax(v)
         L = -torch.sum(self.weights[indices] * torch.log(p+1e-12))/len(indices)
 
         revisedY = self.weights[indices].clone()
@@ -71,7 +71,7 @@ class CELoss(nn.Module):
     def forward(self, inputs, targets):
         v = inputs - torch.mean(inputs, axis=1, keepdims=True)
         logp = self.logsoftmax(v)
-        L = - torch.sum(targets*logp)
+        L = - torch.sum(targets * logp)
         return L
 
 class BrierLoss(nn.Module):

@@ -78,16 +78,17 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
     train_loss_list = []
     train_acc_list = []
     test_acc_list = []
-
+    print()
     # Iterate over the epochs
     for epoch in range(num_epochs):
         model.train()
 
         running_loss = 0.0
         correct = 0
-
+        #print (trainloader.dataset)
         # Iterate over the training batches
         for inputs, vl, targets, ind in trainloader:
+            #print(inputs, vl, targets, ind)
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:
@@ -127,8 +128,8 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
 
     # Save the training and test results in a pickle file
     results = {'train_loss': train_loss_list, 'train_acc': train_acc_list, 'test_acc': test_acc_list}
-    with open('results.pkl', 'wb') as f:
-        pickle.dump(results, f)
+    #with open('results.pkl', 'wb') as f:
+    #    pickle.dump(results, f)
 
     # Return the trained model and the results
     return model, results
@@ -136,20 +137,16 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
 
 
 def warm_up(model, trainloader, testloader, optimizer, loss_fn, num_epochs):
-
-    # Create a list to store the training loss, training accuracy, and test accuracy
     train_loss_list = []
     train_acc_list = []
     test_acc_list = []
 
-    # Iterate over the epochs
     for epoch in range(num_epochs):
         model.train()
 
         running_loss = 0.0
         correct = 0
 
-        # Iterate over the training batches
         for inputs, vl, targets, ind in trainloader:
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -189,9 +186,9 @@ def warm_up(model, trainloader, testloader, optimizer, loss_fn, num_epochs):
               .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
 
     # Save the training and test results in a pickle file
-    results = {'train_loss': train_loss_list, 'train_acc': train_acc_list, 'test_acc': test_acc_list}
-    with open('results.pkl', 'wb') as f:
-        pickle.dump(results, f)
+    results = {'train_loss': train_loss_list, 'train_acc': train_acc_list, 'test_acc': test_acc_list,}
+    #with open('results.pkl', 'wb') as f:
+    #    pickle.dump(results, f)
 
     # Return the trained model and the results
     return model, results

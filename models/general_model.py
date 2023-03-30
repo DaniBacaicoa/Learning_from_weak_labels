@@ -3,11 +3,12 @@ import torch.nn as nn
 
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = True,
+    def __init__(self, input_size, hidden_sizes, output_size, dropout_p=0.0, bn = True, do=True,
                  activation = 'relu', layer_init=nn.init.xavier_uniform_, bn_init=nn.init.ones_,
                  bn_momentum = 0.1, seed = None):
         super().__init__()
         self.bn = bn
+        self.do = do
         if seed is not None:
             torch.manual_seed(seed)
 
@@ -35,7 +36,8 @@ class MLP(nn.Module):
                 bn_init(bn.weight)
 
         # Create a dropout layer
-        self.dropout = nn.Dropout(dropout_p)
+        if self.do:
+            self.dropout = nn.Dropout(dropout_p)
 
         self.activation = activation
         self.bn = bn
@@ -47,7 +49,8 @@ class MLP(nn.Module):
                 x = self.batch_norms[i](x)
             activation_fn = getattr(nn.functional, self.activation)
             x = activation_fn(x)
-            x = self.dropout(x)
+            if self.do:
+                x = self.dropout(x)
         x = self.layers[-1](x)
         return x
 
