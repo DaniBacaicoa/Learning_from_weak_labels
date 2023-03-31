@@ -34,6 +34,7 @@ class Weakener(object):
         '''
         # This is for a matrix given by the user.
         self.c = true_classes
+        self.d = None
         self.M = None
 
         self.z = None
@@ -149,7 +150,9 @@ class Weakener(object):
             '''
             # [TBD]
             return _
+
         self.M, self.Z, self.labels = self.label_matrix(M)
+        self.d = self.M.shape[0]
 
     def generate_weak(self, y, seed=None):
         # It should work with torch
@@ -162,11 +165,15 @@ class Weakener(object):
         return self.z, self.w
 
 
-    def virtual_matrix(self, p=None, convex=True):
+    def virtual_matrix(self, p=None, optimize = True, convex=True):
         d, c = self.M.shape
         I_c = np.eye(c)
+
         if p == None:
-            p = np.ones(d)/d
+            if optimize:
+                p = self.generate_wl_priors(self.z)
+            else:
+                p = np.ones(d)/d
         c_1 = np.ones((c,1))
         d_1 = np.ones((d,1))
 
@@ -197,7 +204,7 @@ class Weakener(object):
         z must be the weak label in the z form given by generate weak
         '''
         #In order to not generate weak labels each time we seek the existence of them
-        # and in the case they are already generated we dont generate them again
+        # and in the case they are already generated we don't generate them again
         if self.z is None:
             if y is None:
                 raise NameError('The weak labels have not been yet created. You shuold give the true labels. Try:\n  class.virtual_labels(y)\n instead')
@@ -206,9 +213,35 @@ class Weakener(object):
         self.v = self.Y.T[self.z]
         return
 
-    def generate_wl_priors(self,z):
+    def generate_wl_priors(self,z, loss = 'CELoss'):
         if self.z is None:
             _,_ = self.generate_weak(y, seed=seed)
+
+        z_count = Counter(z)
+        p_est = np.array([z_count[x] for x in range(self.d)])
+        v_eta = cvxpy.Variable(self.c)
+        if loss == 'CELoss':
+            lossf = -p_est @ cvxpy.log(self.M @ v_eta)
+        elif loss == 'BrierLoss':
+            p_est = p_est / np.sum(p_est)
+            lossf = cvxpy.sum_squares(p_est - self.M @ v_eta)
+
+        problem = cvxpy.Problem(cvxpy.Minimize(lossf),
+                                [v_eta >= 0, np.ones(self.c) @ v_eta == 1])
+        problem.solve()
+
+        # Compute the wl prior estimate
+        p_reg = self.M @ v_eta.value
+
+        return p_reg
+    '''
+        v_eta = cvxpy.Variable(self.c)
+        if loss == 'cross_entropy':
+            lossf = -p_est @ cvxpy.log(self.M @ v_eta)
+        elif loss == 'square_error':
+            p_est = p_est / np.sum(p_est)
+            lossf = cvxpy.sum_squares(p_est - self.M @ v_eta)
+        '''
 
     def label_matrix(self, M):
         '''
