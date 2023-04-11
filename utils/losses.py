@@ -98,17 +98,18 @@ class LBLoss(nn.Module):
         L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
         return L
 
-class EMLoss(nn.Module):
+class EMLoss(nn.module):
     def __init__(self,M):
         super(EMLoss, self).__init__()
-        self.softmax = torch.nn.Softmax(dim = 1)
+        self.logsoftmax = torch.nn.LogSoftmax(dim=1)
         self.M = M
-
-    def forward(self,inputs,targets):
-        T = torch.max(targets,dim=1)
-        v = inputs  # - torch.mean(inputs, axis=1, keepdims=True)
-        p = self.softmax(v)
-        Q = p * M[tor]
+    def forward(self,out,z):
+        logp = logsoftmax(out)
+        p = torch.exp(logp)
+        Q = p * torch.tensor(self.M[z])
+        Q /= torch.sum(Q,dim=1,keepdim=True)
+        L = -torch.sum(Q*logp)
+        return L
 
 class OSLCELoss(nn.Module):
     def __init__(self):
