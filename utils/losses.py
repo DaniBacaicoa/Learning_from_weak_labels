@@ -62,7 +62,6 @@ class GumbelLoss(nn.Module):
 '''
 
 
-
 class CELoss(nn.Module):
     def __init__(self):
         super(CELoss, self).__init__()
