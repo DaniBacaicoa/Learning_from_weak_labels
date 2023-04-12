@@ -73,6 +73,22 @@ class CELoss(nn.Module):
         L = - torch.sum(targets * logp)
         return L
 
+class R_CELoss(nn.Module):
+    def __init__(self, reg_weight = 0.1, reg_type = 1):
+        super(R_CELoss, self).__init__()
+        self.logsoftmax = torch.nn.LogSoftmax(dim=1)
+        self.reg_weight = reg_weight
+        self.reg_type = reg_type
+
+    def forward(self, inputs, targets, model):
+        v = inputs - torch.mean(inputs, axis=1, keepdims=True)
+        logp = self.logsoftmax(v)
+        L = - torch.sum(targets * logp)
+        reg = 0.
+        for param in model.parameters():
+            reg += torch.norm(param, self.reg_type)
+        return L + self.reg_weight * reg
+
 class BrierLoss(nn.Module):
     def __init__(self):
         super(BrierLoss, self).__init__()
@@ -98,7 +114,25 @@ class LBLoss(nn.Module):
         L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
         return L
 
-class EMLoss(nn.module):
+
+class R_LBLoss(nn.Module):
+    def __init__(self, k = 1 , beta = 1, reg_weight = 0.1, reg_type = 2):
+        super(R_LBLoss, self).__init__()
+        self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
+        self.k = k
+        self.beta = beta
+        self.reg_weight = reg_weight
+        self.reg_type = reg_type
+    def forward(self, inputs, targets, model):
+        v = inputs - torch.mean(inputs, axis=1, keepdims=True)
+        logp = self.logsoftmax(v)
+        L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
+        reg = 0.
+        for param in model.parameters():
+            reg += torch.norm(param, self.reg_type)
+        return L + self.reg_weight * reg
+
+class EMLoss(nn.Module):
     def __init__(self,M):
         super(EMLoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim=1)
