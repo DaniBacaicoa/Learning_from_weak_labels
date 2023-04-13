@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 
 
+'''
 class PartialLoss2(nn.Module):
     def __init__(self, weak_labels):
-        super(PartialLoss, self).__init__()
+        super(PartialLoss2, self).__init__()
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.softmax = nn.Softmax(dim=1)
         self.weak_labels = weak_labels.detach()
@@ -21,32 +22,74 @@ class PartialLoss2(nn.Module):
         #new_weights = self.weak_labels[indices] * torch.exp(logp)
         self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
         return L
-
+'''
 class PartialLoss(nn.Module):
     def __init__(self, weak_labels):
         super(PartialLoss, self).__init__()
-        self.softmax = nn.Softmax(dim=1)
-        self.weak_labels = weak_labels.detach()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.weak_labels = weak_labels.clone().detach()
         self.weights = (self.weak_labels / torch.sum(self.weak_labels, dim=1, keepdim=True))
 
     def forward(self,output,targets,indices):
-        v = output - torch.mean(output, axis=1, keepdims=True)
-        p = self.softmax(v)
-        L = -torch.sum(self.weights[indices] * torch.log(p+1e-12))/len(indices)
+        '''
+        # targets are not used as we use the updated weights.
+        # anyway they are left there to maintain coherence with the rest of the losses
+        #v = output - torch.mean(output, axis=1, keepdims=True)
+        '''
+        logp = self.logsoftmax(output)
+        L = - torch.sum(self.weights[indices] * logp)/len(indices)
+
 
         revisedY = self.weights[indices].clone()
         revisedY[revisedY > 0] = 1
-        revisedY = revisedY * p.clone().detach()
-        revisedY = revisedY / revisedY.sum(dim=1).repeat(revisedY.size(1), 1).transpose(0, 1)
+        revisedY = revisedY * torch.exp(logp).clone().detach()
+        revisedY = revisedY / torch.sum(revisedY, dim=1, keepdim=True)
 
         self.weights[indices] = revisedY
 
         return L
 
 
+class PartialLoss(nn.Module):
+    def __init__(self, weak_labels):
+        super(PartialLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.weak_labels = weak_labels.clone().detach()
+        self.weights = (self.weak_labels / torch.sum(self.weak_labels, dim=1, keepdim=True))
+
+    def forward(self,output,targets,indices):
+        '''
+        # targets are not used as we use the updated weights.
+        # anyway they are left there to maintain coherence with the rest of the losses
+        #v = output - torch.mean(output, axis=1, keepdims=True)
+        '''
+        logp = self.logsoftmax(output)
+        L = - torch.sum(self.weights[indices] * logp)/len(indices)
 
 
+        revisedY = self.weights[indices].clone()
+        revisedY[revisedY > 0] = 1
+        revisedY = revisedY * torch.exp(logp).clone().detach()
+        revisedY = revisedY / torch.sum(revisedY, dim=1, keepdim=True)
 
+        self.weights[indices] = revisedY
+
+        return L
+
+
+def partial_loss(out, targ, true, eps=1e-12):
+    softmax = nn.Softmax(dim=1)
+    p = softmax(out)
+    l = targ * torch.log(p+eps)
+    loss = -torch.sum(l)/l.size(0)
+
+    revisedY = targ.clone()
+    revisedY[revisedY > 0] = 1
+    revisedY = revisedY * (p.clone().detach())
+    revisedY = revisedY / torch.sum(revisedY, dim=1, keepdim=True)
+    new = revisedY
+
+    return loss, new
 
 
 

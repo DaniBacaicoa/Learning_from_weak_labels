@@ -220,7 +220,7 @@ class Weakener(object):
         #z_count = Counter(z)
         #p_est = np.array([z_count[x] for x in range(self.d)])
         p_est = np.array(torch.bincount(self.z))
-        v_eta = cvxpy.Variable(self.c)
+        v_eta = cvxpy.Variable(int(self.c))
         if loss == 'CELoss':
             lossf = -p_est @ cvxpy.log(self.M @ v_eta)
         else:
