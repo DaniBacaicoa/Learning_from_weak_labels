@@ -181,11 +181,14 @@ class EMLoss(nn.Module):
         self.logsoftmax = torch.nn.LogSoftmax(dim=1)
         self.M = M
     def forward(self,out,z):
-        logp = logsoftmax(out)
+        logp = self.logsoftmax(out)
+        #print(logp)
         p = torch.exp(logp)
-        Q = p * torch.tensor(self.M[z])
+        Q = p.detach() * torch.tensor(self.M[z])
         Q /= torch.sum(Q,dim=1,keepdim=True)
+        #print(Q)
         L = -torch.sum(Q*logp)
+        #print(L)
         return L
 
 class OSLCELoss(nn.Module):
