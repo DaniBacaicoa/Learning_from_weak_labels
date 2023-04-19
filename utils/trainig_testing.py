@@ -2,23 +2,18 @@ import torch
 import pickle
 import inspect
 from utils.losses import partial_loss
+import numpy as np
 
-def train_model(model,trainloader, optimizer, loss_fn, num_epochs, return_model=False):
-    # Set the model to training mode
+def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model=False):
     model.train()
 
-    # Initialize the loss and accuracy tensors
     train_losses = torch.zeros(num_epochs)
     train_accs = torch.zeros(num_epochs)
 
-    # Train the model for the specified number of epochs
     for epoch in range(num_epochs):
-        # Initialize the running loss and correct predictions
         running_loss = 0.0
         correct = 0
-
-        # Iterate over the training batches
-        for inputs, vl, trues, ind in trainloader:
+        for i, inputs, vl, trues, ind in enumerate(trainloader):
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:
@@ -28,13 +23,13 @@ def train_model(model,trainloader, optimizer, loss_fn, num_epochs, return_model=
             loss.backward()
             optimizer.step()
 
-            # Update the running loss and correct predictions
+            #Update batche's loss and acc
             running_loss += loss.item()
-            _, preds = torch.max(outputs,dim=1)
-            _, true = torch.max(trues,dim=1)
+            _, preds = torch.max(outputs, dim=1)
+            _, true = torch.max(trues, dim=1)
             correct += torch.sum(preds == true)
 
-        # Compute the average loss and accuracy for this epoch
+        # loss and acc per epoch
         epoch_loss = running_loss / len(trainloader.dataset)
         epoch_acc = correct.double() / len(trainloader.dataset)
 
@@ -48,7 +43,6 @@ def train_model(model,trainloader, optimizer, loss_fn, num_epochs, return_model=
         return train_losses, train_accs
 
 def evaluate_model(model, testloader, sound = True):
-    # Set the model to evaluation mode
     model.eval()
     correct = 0
 
@@ -56,83 +50,67 @@ def evaluate_model(model, testloader, sound = True):
         for inputs, targets in testloader:
             outputs = model(inputs)
 
-            # Compute the predictions
             _, preds = torch.max(outputs, dim=1)
             _, true = torch.max(targets, dim=1)
             correct += torch.sum(preds == true)
 
-    # Compute the accuracy
+    #Accuracy
     accuracy = correct.double() / len(testloader.dataset)
 
-    # Print the accuracy
+    # Print the accuracy if not in another function
     if sound:
         print('Evaluation Accuracy: {:.4f}'.format(accuracy))
-
-    # Return the accuracy
     return accuracy
 
 
+def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_epochs, sound = 10):
+    train_losses = torch.zeros(num_epochs)
+    train_accs = torch.zeros(num_epochs)
+    test_accs = torch.zeros(num_epochs)
 
-def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_epochs):
-
-    # Create a list to store the training loss, training accuracy, and test accuracy
-    train_loss_list = []
-    train_acc_list = []
-    test_acc_list = []
-    print()
-    # Iterate over the epochs
     for epoch in range(num_epochs):
         model.train()
 
         running_loss = 0.0
         correct = 0
-        #print (trainloader.dataset)
-        # Iterate over the training batches
+
         for inputs, vl, targets, ind in trainloader:
-            #print(inputs, vl, targets, ind)
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:
                 loss = loss_fn(outputs, vl, ind)
             else:
                 loss = loss_fn(outputs, vl)
-            #loss = loss_fn(outputs, vl)
             loss.backward()
             optimizer.step()
 
-            # Update the running loss
+            # Update batche's loss and acc
             running_loss += loss.item()
-
             _, preds = torch.max(outputs, dim=1)
             _, true = torch.max(targets, dim=1)
-
-            # Update the correct predictions
             correct += torch.sum(preds == true)
 
-        # Compute the training accuracy and loss
+        # loss and acc per epoch
         train_acc = correct.double() / len(trainloader.dataset)
         train_loss = running_loss / len(trainloader.dataset)
 
-        # Append the training accuracy and loss to the lists
-        train_loss_list.append(train_loss)
-        train_acc_list.append(train_acc)
+        train_losses[epoch] = train_loss
+        train_accs[epoch] = train_acc
 
         # Evaluate the model on the test set
         test_acc = evaluate_model(model, testloader, sound=False)
+        test_accs[epoch] = test_acc
 
-        # Append the test accuracy to the list
-        test_acc_list.append(test_acc)
+        if epoch % sound == sound-1:
 
-        # Print the epoch results
-        print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
-              .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
+            print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
+                  .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
 
     # Save the training and test results in a pickle file
-    results = {'train_loss': train_loss_list, 'train_acc': train_acc_list, 'test_acc': test_acc_list}
+    results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs}
     #with open('results.pkl', 'wb') as f:
     #    pickle.dump(results, f)
 
-    # Return the trained model and the results
     return model, results
 
 
@@ -192,4 +170,71 @@ def warm_up(model, trainloader, testloader, num_epochs):
     #    pickle.dump(results, f)
 
     # Return the trained model and the results
+    return model, results
+
+
+
+
+
+def ES_train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_epochs, patience=5):
+    train_losses = []
+    train_accs = []
+    test_accs = []
+
+    # variables for early stopping
+    best_loss = np.inf
+    patience_counter = 0
+
+
+    for epoch in range(num_epochs):
+        model.train()
+
+        running_loss = 0.0
+        correct = 0
+
+        for inputs, vl, targets, ind in trainloader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            if len(inspect.getfullargspec(loss_fn.forward).args) > 3:
+                loss = loss_fn(outputs, vl, ind)
+            else:
+                loss = loss_fn(outputs, vl)
+            loss.backward()
+            optimizer.step()
+
+            # Update the running loss
+            running_loss += loss.item()
+            _, preds = torch.max(outputs, dim=1)
+            _, true = torch.max(targets, dim=1)
+            correct += torch.sum(preds == true)
+
+        # Compute the training accuracy and loss
+        train_acc = correct.double() / len(trainloader.dataset)
+        train_loss = running_loss / len(trainloader.dataset)
+
+        # loss and acc per epoch
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
+
+        # Evaluate the model on the test set
+        test_acc = evaluate_model(model, testloader, sound=False)
+        test_accs.append(test_acc)
+
+        # Print the epoch results
+        print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
+            .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
+
+        # Early Stopping
+        if train_loss < best_loss:
+            best_loss = train_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print('Train loss has not improved in {} epochs. Stopping early...'.format(patience))
+                break
+
+    # Save the results
+    results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs}
+
     return model, results
