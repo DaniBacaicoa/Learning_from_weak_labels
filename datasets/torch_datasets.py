@@ -88,8 +88,8 @@ class Torch_Dataset(Dataset):
 
     def get_dataloader(self, indices=None):
         if indices is None:
-            indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
-
+            #indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
+            indices = torch.arange(len(self.train_dataset))
         if self.weak_labels is None:
             dataset = TensorDataset(self.train_dataset.data[indices], self.train_dataset.targets[indices])
         else:

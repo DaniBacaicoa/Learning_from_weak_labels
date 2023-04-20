@@ -1,8 +1,9 @@
 import torch
 import pickle
 import inspect
-from utils.losses import partial_loss
+from utils.losses import PartialLoss
 import numpy as np
+
 
 def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model=False):
     model.train()
@@ -68,6 +69,8 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
     train_accs = torch.zeros(num_epochs)
     test_accs = torch.zeros(num_epochs)
 
+    torch.autograd.set_detect_anomaly(True)
+
     for epoch in range(num_epochs):
         model.train()
 
@@ -120,8 +123,7 @@ def warm_up(model, trainloader, testloader, num_epochs):
     train_acc_list = []
     test_acc_list = []
     optimizer = torch.optim.SGD(list(model.parameters()),lr = 1e-2, weight_decay = 1e-4, momentum = 0.9)
-    partial_weight = trainloader.dataset.tensors[1].clone().detach()
-    partial_weight = partial_weight/torch.sum(partial_weight,dim=1,keepdim=True)
+    loss_fn = PartialLoss(trainloader.dataset.tensors[1])
 
     for epoch in range(num_epochs):
         running_loss = 0.0
@@ -130,9 +132,7 @@ def warm_up(model, trainloader, testloader, num_epochs):
         for inputs, wl, targets, ind in trainloader:
 
             outputs = model(inputs)
-
-            loss,new_labels = partial_loss(outputs,partial_weight[ind,:].clone().detach(),None)
-            partial_weight[ind,:] = new_labels.clone().detach()
+            loss = loss_fn(outputs,wl,ind)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

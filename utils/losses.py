@@ -23,7 +23,39 @@ class PartialLoss2(nn.Module):
         self.weights[indices] = new_weights/torch.sum(new_weights, dim=1, keepdim=True)
         return L
 '''
+
+
 class PartialLoss(nn.Module):
+    def __init__(self, weak_labels):
+        super(PartialLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        #self.weak_labels = weak_labels / torch.sum(weak_labels, dim=1, keepdim=True)
+        self.weights = nn.Parameter(torch.Tensor(weak_labels / torch.sum(weak_labels, dim=1, keepdim=True)),requires_grad=False)
+
+    def forward(self, output, targets, indices):
+        #print(self.weights)
+        '''
+        # targets are not used as we use the updated weights.
+        # anyway they are left there to maintain coherence with the rest of the losses
+        #v = output - torch.mean(output, axis=1, keepdims=True)
+        '''
+        # We take the weights in this batch
+        weight = self.weights[indices]
+        weight = weight.detach()
+
+        logp = self.logsoftmax(output)
+        L = - torch.sum(weight * logp) / len(indices)
+
+        weight = torch.where(weight > 0, torch.tensor(1, dtype=weight.dtype, device=weight.device), weight)
+        weight = weight * torch.exp(logp).clone().detach()
+        weight = weight / torch.sum(weight, dim=1, keepdim=True)
+
+        self.weights[indices] = weight
+
+        return L
+
+
+class PartialLoss_b(nn.Module):
     def __init__(self, weak_labels):
         super(PartialLoss, self).__init__()
         self.logsoftmax = nn.LogSoftmax(dim=1)
@@ -50,7 +82,7 @@ class PartialLoss(nn.Module):
         return L
 
 
-class PartialLoss(nn.Module):
+class PartialLoss_b2(nn.Module):
     def __init__(self, weak_labels):
         super(PartialLoss, self).__init__()
         self.logsoftmax = nn.LogSoftmax(dim=1)
@@ -77,7 +109,7 @@ class PartialLoss(nn.Module):
         return L
 
 
-def partial_loss(out, targ, true, eps=1e-12):
+def partial_loss_b3(out, targ, true, eps=1e-12):
     softmax = nn.Softmax(dim=1)
     p = softmax(out)
     l = targ * torch.log(p+eps)
