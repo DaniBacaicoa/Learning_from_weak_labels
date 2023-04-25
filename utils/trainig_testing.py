@@ -181,9 +181,12 @@ def ES_train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, nu
     train_accs = []
     test_accs = []
 
-    # variables for early stopping
-    best_loss = np.inf
+    # variables for early stopping (this should be done on a validation set)
+    # this is only for quick results
+    #best_loss = np.inf
+    best_acc = 0
     patience_counter = 0
+
 
 
     for epoch in range(num_epochs):
@@ -224,7 +227,16 @@ def ES_train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, nu
         print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
             .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
 
-        # Early Stopping
+        # Early Stopping (on train, i know it should be on validation)
+        if train_acc > best_acc:
+            best_acc = train_acc
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print('Train loss has not improved in {} epochs. Stopping early...'.format(patience))
+                break
+        '''        
         if train_loss < best_loss:
             best_loss = train_loss
             patience_counter = 0
@@ -233,8 +245,8 @@ def ES_train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, nu
             if patience_counter >= patience:
                 print('Train loss has not improved in {} epochs. Stopping early...'.format(patience))
                 break
-
-    # Save the results
+        '''
+        # Save the results
     results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs}
 
     return model, results
