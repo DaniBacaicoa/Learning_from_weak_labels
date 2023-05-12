@@ -214,13 +214,13 @@ class EMLoss(nn.Module):
         self.M = M
     def forward(self,out,z):
         logp = self.logsoftmax(out)
-        #print(logp)
+
         p = torch.exp(logp)
         Q = p.detach() * torch.tensor(self.M[z])
         Q /= torch.sum(Q,dim=1,keepdim=True)
-        #print(Q)
+
         L = -torch.sum(Q*logp)
-        #print(L)
+
         return L
 
 class OSLCELoss(nn.Module):
@@ -252,4 +252,68 @@ class OSLBrierLoss(nn.Module):
         p = torch.exp(self.logsoftmax(inputs))
         D = self.hardmax(targets * p)
         L = torch.sum((D - p)**2)/2
+        return L
+
+
+class EMLoss_new(nn.Module):
+    def __init__(self, n_weak, n_true):
+        super(EMLoss_new, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.n_true = n_true
+        self.n_weak = n_weak
+        self.M = nn.Parameter(torch.ones((n_weak,n_true)) / n_weak, requires_grad=True)
+
+    def forward(self, out, z):
+        logp = self.logsoftmax(out)
+        p = torch.exp(logp)
+        Q = self.est_true_label_dist(p, z)
+        self.update_noisy_prior(Q, z)
+        loss = -torch.sum(Q * logp)
+        return loss
+
+    def est_true_label_dist(self, p, z):
+        Q = p * self.M[z]
+        Q /= torch.sum(Q, dim=1, keepdim=True)
+        return Q
+
+    def update_noisy_prior(self, Q, z):
+        M_new = torch.zeros_like(self.M)
+        for i in range(self.n_true):
+            if i in z:
+                print(Q.shape,Q[1:10,:])
+                print(z.shape,z)
+
+                print(Q[z==i,:])
+
+                print(torch.sum(Q[z==i,:],dim=1))
+                QQ = torch.mean(Q[z==i,:],dim=1)/torch.sum(torch.mean(Q[z==i,:],dim=1))
+                #print(QQ.shape, QQ[1:10, :])
+                print(M_new.shape,M_new[:,i].shape,M_new)
+                print(QQ.shape,QQ)
+
+                M_new[:,i] = QQ
+            else:
+                M_new[:,i] = self.M[:,i]
+        self.M.data = M_new
+
+        # instead of having the M, with the Q could we have a instance dependent?
+
+
+
+class EMLoss2(nn.Module):
+    def __init__(self, d, c, M_est ):
+        super(EMLoss2, self).__init__()
+        self.logsoftmax = torch.nn.LogSoftmax(dim=1)
+
+        self.M_hat = nn.Parameter(M_est, requires_grad= True)
+
+    def forward(self, out, z):
+        logp = self.logsoftmax(out)
+        p = torch.exp(logp)
+
+        Q = p.detach() * self.M_hat[z]
+        Q /= torch.sum(Q, dim=1, keepdim=True)
+
+        L = -torch.sum(Q * logp)
+
         return L

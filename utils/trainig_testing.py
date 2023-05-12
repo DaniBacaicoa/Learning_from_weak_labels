@@ -15,6 +15,7 @@ def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model
         running_loss = 0.0
         correct = 0
         for i, inputs, vl, trues, ind in enumerate(trainloader):
+            #vl = vl.type(torch.LongTensor)
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:
@@ -78,6 +79,7 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
         correct = 0
 
         for inputs, vl, targets, ind in trainloader:
+            vl = vl.type(torch.LongTensor)
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:
