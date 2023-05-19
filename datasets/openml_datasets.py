@@ -33,6 +33,8 @@ class OpenML_Dataset(Dataset):
             - 'iris'
             - 'digits'
             - 'covtype'
+            Openml edited datasets
+            - 'glass_2' (glass dataset but with 3 classes)
             Openml datasets
             -   'iris': 61, 'pendigits': 32, 'glass': 41, 'segment': 36,
                 'vehicle': 54, 'vowel': 307, 'wine': 187, 'abalone': 1557,
@@ -117,6 +119,16 @@ class OpenML_Dataset(Dataset):
             dataset = skd.fetch_covtype()
             X = dataset.data
             y = dataset.target - 1
+        elif self.dataset == 'glass_2':
+
+            dataset = openml.datasets.get_dataset(41)
+            X, y, _, _ = dataset.get_data(target=dataset.default_target_attribute)
+            class_mask = (y == 'build wind float') | (y == 'build wind non-float') | (y == 'headlamps')
+            X_filtered, y_filtered = X[class_mask], y[class_mask]
+            le = preprocessing.LabelEncoder()
+            y_filtered = le.fit_transform(y_filtered)
+            X, y = shuffle(X_filtered, y_filtered, random_state=self.splitting_seed)
+            X = X.values
         else:
             print('TBD. Sorry for the inconvenience.')
 
