@@ -34,11 +34,12 @@ class Weakener(object):
             - See papers of this (how this works), maybe include some relaxations in M
 
         '''
-        # This is for a matrix given by the user.
+        # We will allocate variables for important data 
+         # This is for a matrix given by the user.
         self.c = true_classes
         self.d = None
         self.M = None
-
+         # This is for the labels (when possible we will store all the possibilities)
         self.z = None
         self.w = None
 
@@ -83,7 +84,7 @@ class Weakener(object):
             [  a_1    a_2    1+a_3]
             '''
             if any(np.array(alpha) < -1):
-                NameError('For noisy labels all components of alpha shoud be greater than -1')
+                NameError('For noisy labels all components of alpha should be greater than -1')
             elif any(np.array(alpha) == -1):
                 cl = np.where(np.array(alpha) == -1)[0]
                 print('labels', cl, 'are considered complemetary labels')
