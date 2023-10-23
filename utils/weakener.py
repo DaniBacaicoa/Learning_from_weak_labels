@@ -34,11 +34,14 @@ class Weakener(object):
             - See papers of this (how this works), maybe include some relaxations in M
 
         '''
-        # We will allocate variables for important data 
-         # This is for a matrix given by the user.
+        # Create empty spaces for every attribute each class can have
+         # This is for the mixing matrix.
         self.c = true_classes
         self.d = None
         self.M = None
+         # For the matric containing the one-hot labels
+        self.Z = None
+         # For the label encoding dict? 
          # This is for the labels (when possible we will store all the possibilities)
         self.z = None
         self.w = None

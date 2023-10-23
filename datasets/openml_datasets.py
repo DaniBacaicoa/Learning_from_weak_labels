@@ -55,7 +55,7 @@ class OpenML_Dataset(Dataset):
     def __init__(self, dataset, train_size=0.7, batch_size=64, shuffling=False, splitting_seed=47):
 
         self.dataset = dataset
-        self.tr_size = train_size
+        self.tr_size = train_size # It can be a two or three size tuple (tr_s,val_s,test_s)
         self.weak_labels = None
         self.virtual_labels = None
         self.batch_size = batch_size
