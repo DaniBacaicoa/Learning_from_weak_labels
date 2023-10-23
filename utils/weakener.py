@@ -137,6 +137,7 @@ class Weakener(object):
             probs, Z = self.pll_weights(p=self.pll_p)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
+            M = M / M.sum(0)
             #self.M, self.Z, self.labels = self.label_matrix(M)
 
         elif model_class == 'pll_a':
@@ -145,6 +146,7 @@ class Weakener(object):
             probs, Z = self.pll_weights(p=self.pll_p, anchor_points=True)  # Take this probability from argparse
 
             M = np.array([list(map(probs.get, Z[:, i] * np.sum(Z, 1))) for i in range(self.c)]).T
+            M = M / M.sum(0)
             #self.M, self.Z, self.labels = self.label_matrix(M)
 
         elif model_class == 'Complementary_weak':
@@ -245,54 +247,81 @@ class Weakener(object):
             lossf = cvxpy.sum_squares(p_est - self.M @ v_eta)
         '''
 
-    def label_matrix(self, M):
-        '''
+    def label_matrix(M):
+        """
+        The objective of this function is twofold:
+            1. It removes rows with no positive elements from M
+            2. It creates a label matrix and a label dictionary
 
-        :param M:
-        :param give_M:
-        :return:
-        '''
+        Args:
+            M (numpy.ndarray): A mixing matrix (Its not required an stochastic matrix).
+                but its required its shape to be either dxc(all weak labels) or cxc(all true labels)
 
-        Z = []
-        trimmed_M = []
+        Returns:
+            - numpy.ndarray: Trimmed verison of the mixing matrix.
+            - numpy.ndarray: Label matrix, where each row is converted to a binary label.
+            - dict: A dictionary of labels where keys are indices and values are binary labels.
 
+        Example:
+            >>> M = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0],
+                              [0, 1, 1], [1, 0, 1], [0, 1, 0],
+                              [0, 1, 1], [0, 0, 0]])
+            >>> trimmed_M, label_M, labels = label_matrix(M)
+            >>> trimmed_M
+            array([[1 0 0],
+                   [0 1 1],
+                   [1 0 1],
+                   [0 1 0],
+                   [0 1 1]])
+            >>> label_M
+            array([[0 0 0],
+                   [0 1 1]
+                   [1 0 0]
+                   [1 0 1]
+                   [1 1 0]])
+            >>> labels
+            {0: '000', 1: '011', 2: '100', 3: '101', 4: '110'}
+        """
         d, c = M.shape
-        e = 0
+
         if d == c:
-            labels = dict((a, ''.join([[str(ele) for ele in sub] for sub
-                                       in np.eye(c, dtype=int).tolist()][a])) for a in range(c))
-            trimmed_M = M
-            Z = M
+            # If M is a square matrix, labels are
+            Z = np.eye(c)
+            # We make this in reversin order to get ('10..00', '01..00', .., '00..01')
+            labels = {i: format(2**(c-(i+1)),'b').zfill(c) for i in range(c)} 
+        elif (d<2**c):
+            raise ValueError("Labels cannot be assigned to each row")
         else:
-            z_row = M.any(axis=1)
-            labels = {}
-            for i in range(2 ** c):
-                if z_row[i]:
-                    b = bin(i)[2:]
-                    b = str(0) * (c - len(b)) + b  # this makes them same length
-                    labels[e] = b
-                    e += 1
-                    Z.append(list(map(int, list(b))))
-                    trimmed_M.append(M[i, :])
-        return np.array(trimmed_M), np.array(Z), labels
+            # Z is a matrix with all the possible labels
+            Z = np.array([[int(i) for i in format(j,'b').zfill(c)] for j in range(2**c)])
+            # Now, we will get only the rows with nonzero elements
+            z_row = M.any(axis = 1)
+            # We assing the binary representation to those nonzero rows
+            encoding = [format(i,'b').zfill(c) for i, exists in enumerate(z_row) if exists]
+            # and we will give a numerical value to those representation of labels
+            labels = {i:enc for i,enc in enumerate(encoding)}
+            Z = Z[z_row,:]
+            M = M[z_row,:]
 
-    def pll_weights(self, p=0.5, anchor_points=False):
+        return M, Z, labels
+
+    def pll_weights(c, p=0.5, anchor_points=False):
         '''
-
         :param self.c:
         :param p:
         :param anchor_points: Whether presence of anchor points are allowed
         :return:
         '''
-        _, Z, _ = self.label_matrix(np.ones((2 ** self.c, self.c)))
+        _, Z, _ = label_matrix(np.ones((2 ** c, c)))
         probs = {0: 0}
         q = 1 - p
-        for i in range(1, self.c + 1):
-            if anchor_points:
-                probs[1] = q ** self.c + p * q ** (self.c - 1)
-                probs[2] = p ** 2 * q ** (self.c - 2) + p * q ** (self.c - 1)
-            else:
-                probs[1] = 0
-                probs[2] = p ** 2 * q ** (self.c - 2) + p * q ** (self.c - 1) + (q ** self.c + p * q ** (self.c - 1)) / (self.c - 1)
-            probs[i] = p ** i * q ** (self.c - i) + p ** (i - 1) * q ** (self.c - i + 1)
+        
+        if anchor_points:
+            probs[1] = q ** c + p * q ** (c - 1)
+            probs[2] = p ** 2 * q ** (c - 2) + p * q ** (c - 1)
+        else:
+            probs[1] = 0
+            probs[2] = p ** 2 * q ** (c - 2) + p * q ** (c - 1) + (q ** c + p * q ** (c - 1)) / (c - 1)
+        for i in range(1, c + 1):
+            probs[i] = p ** i * q ** (c - i) + p ** (i - 1) * q ** (c - i + 1)
         return probs, np.array(Z)
