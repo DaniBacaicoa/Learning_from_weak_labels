@@ -309,12 +309,24 @@ class Weakener(object):
         return M, Z, labels
 
     def pll_weights(c, p=0.5, anchor_points=False):
-        '''
-        :param self.c:
-        :param p:
-        :param anchor_points: Whether presence of anchor points are allowed
-        :return:
-        '''
+        """
+        Descrip
+
+        Args:
+            p (double): 
+
+        Returns:
+            - dict: 
+            - numpy.ndarray: 
+
+        Example:
+            >>> p = 
+            >>> probs, Z= label_matrix(pll_weights)
+            >>> probs
+            output
+            >>> z
+            out
+        """
         _, Z, _ = label_matrix(np.ones((2 ** c, c)))
         probs = {0: 0}
         q = 1 - p
