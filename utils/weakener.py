@@ -46,7 +46,7 @@ class Weakener(object):
         self.z = None
         self.w = None
 
-    def generate_M(self,  model_class='supervised', alpha=1, beta=None,pll_p = 0.5):
+    def generate_M(self,  model_class='supervised', alpha=1, beta=None, pll_p = 0.5):
         '''
         Generates a corruption matrix (a transition matrix)
 
