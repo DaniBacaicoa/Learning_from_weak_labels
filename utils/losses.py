@@ -2,6 +2,92 @@ import torch
 import torch.nn as nn
 
 
+
+
+class CELoss(nn.Module):
+    """
+    Cross entropy loss. calculates the discrepancy between the prediction and the actual label. 
+    loss = -y log(f)
+
+    Args:
+        None
+
+    Returns:
+        - torch.Tensor: The computed cross-entropy loss
+
+    Example:
+        >>> loss_function = Cross_entropy()
+        >>> inputs = torch.tensor([[1.2, 0.5, -0.8],
+                                   [0.1, 0.3, 0.6]])
+        >>> targets = torch.tensor([[0, 1, 0],
+                                    [1, 0, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+        tensor(1.2096)
+    """
+    def __init__(self):
+        super(CELoss, self).__init__()
+        self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
+
+    def forward(self, inputs, targets):
+        """
+        Compute the cross-entropy loss.
+
+        Args:
+            inputs (torch.Tensor): Predicted logits.
+            targets (torch.Tensor): Target labels.
+
+        Returns:
+            torch.Tensor: The computed cross-entropy loss.
+        """
+        v = inputs - torch.mean(inputs, axis = 1, keepdims = True)
+        logp = self.logsoftmax(v)
+        L = - torch.sum(targets * logp)
+        return L
+
+class BrierLoss(nn.Module):
+    """
+    Brier loss. Calculates the mean squared error between the predicted probabilities and the actual label.
+
+    Args:
+        None
+
+    Returns:
+        - torch.Tensor: The computed Brier loss
+
+    Example:
+        >>> loss_function = BrierLoss()
+        >>> inputs = torch.tensor([[0.9, 0.05, 0.05],
+                                   [0.2, 0.3, 0.5]])
+        >>> targets = torch.tensor([[1, 0, 0],
+                                    [0, 1, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+        tensor(0.0675)
+    """
+    def __init__():
+        super(BrierLoss, self).__init__()
+        self.softmax = torch.nn.Softmax(dim = 1)
+
+    def forward(self, inputs, targets):
+        """
+        Compute the Brier loss.
+
+        Args:
+            inputs (torch.Tensor): Predicted probabilities.
+            targets (torch.Tensor): Target labels.
+
+        Returns:
+            torch.Tensor: The computed Brier loss.
+        """
+        v = inputs - torch.mean(inputs, axis = 1, keepdims = True)
+        p = self.softmax(v)
+        L = torch.sum((targets - p)**2)
+        return L
+
+
+
+
 '''
 class PartialLoss2(nn.Module):
     def __init__(self, weak_labels):
@@ -24,7 +110,7 @@ class PartialLoss2(nn.Module):
         return L
 '''
 
-
+'''
 class PartialLoss(nn.Module):
     def __init__(self, weak_labels):
         super(PartialLoss, self).__init__()
@@ -125,7 +211,7 @@ def partial_loss_b3(out, targ, true, eps=1e-12):
 
 
 
-'''
+
 tbd. try to use this as a counterpart to hardmax
 class GumbelLoss(nn.Module):
     #this tries to soften the constraint imposed by the non-differentiability of the minimum
@@ -134,7 +220,7 @@ class GumbelLoss(nn.Module):
         self.tau = tau
 
     def forward(self, output, targets):
-'''
+
 
 
 class CELoss(nn.Module):
@@ -317,3 +403,5 @@ class EMLoss2(nn.Module):
         L = -torch.sum(Q * logp)
 
         return L
+
+'''
