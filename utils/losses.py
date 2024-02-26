@@ -125,7 +125,7 @@ class GumbelLoss(nn.Module):
         Returns:
         Tensor of Gumbel Softmax loss value.
         """
-        y = gumbel_softmax(inputs)
+        y = self.gumbel_softmax(logits = inputs)
         L = -torch.mean(targets * torch.log(y + self.eps))
         return L
 
@@ -181,6 +181,7 @@ class R_CELoss(nn.Module):
             reg += torch.norm(param, self.reg_type)
         return L + self.reg_weight * reg
 
+'''
 class BrierLoss(nn.Module):
     def __init__(self):
         super(BrierLoss, self).__init__()
@@ -206,7 +207,7 @@ class LBLoss(nn.Module):
         L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
         return L
 
-
+'''
 class R_LBLoss(nn.Module):
     def __init__(self, k = 1 , beta = 1, reg_weight = 0.1, reg_type = 2):
         super(R_LBLoss, self).__init__()
@@ -229,6 +230,7 @@ class EMLoss(nn.Module):
         super(EMLoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim=1)
         self.M = M
+        
     def forward(self,out,z):
         logp = self.logsoftmax(out)
 
