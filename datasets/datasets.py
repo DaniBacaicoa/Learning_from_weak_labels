@@ -5,9 +5,11 @@
 """
 #improting standard libraries
 import numpy as np
-from sklearn import preprocessing
+
 import sklearn.datasets as skd
 from sklearn.utils import shuffle
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
 
 #importing database library
 import openml
@@ -15,18 +17,11 @@ import openml
 # importing torch related libraries
 import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
-
-#importing local methods
-from utils.utils_weakener import binarize_labels
-
-#importing torch related libraries
-import torch
-from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torchvision import datasets, transforms
 
 #importing local methods
 from utils.utils_weakener import binarize_labels
+
 
 class OpenML_Dataset(Dataset):
     '''
@@ -60,14 +55,22 @@ class OpenML_Dataset(Dataset):
             - TBD
     '''
 
-    def __init__(self, dataset, train_size=0.7, batch_size=64, shuffling=False, splitting_seed=47):
+    def __init__(self, dataset, train_size = 0.7, test_size = None, valid_size = None, batch_size = 64, shuffling = False, splitting_seed = 47):
 
         self.dataset = dataset
+
+    
         self.tr_size = train_size # It can be a two or three size tuple (tr_s,val_s,test_s)
+        self.val_size = valid_size
+        self.test_size = test_size
+
         self.weak_labels = None
         self.virtual_labels = None
+
         self.batch_size = batch_size
+        
         self.shuffle = shuffling
+        
         self.splitting_seed = splitting_seed
 
         openml_ids = {'iris': 61, 'pendigits': 32, 'glass': 41, 'segment': 36,
@@ -89,8 +92,8 @@ class OpenML_Dataset(Dataset):
             )
             X = X.values
             le = preprocessing.LabelEncoder()
-            y = le.fit_transform(y)
-            X, y = shuffle(X, y, random_state=self.splitting_seed)
+            y = le.fit_transform(y) #Tis encodes labels into classes [0,1,2,...,n_classes-1]
+            X, y = shuffle(X, y, random_state = self.splitting_seed)
         elif isinstance(self.dataset, int):
             data = openml.datasets.get_dataset(self.dataset)
             X, y, categorical, feature_names = data.get_data(
@@ -140,11 +143,10 @@ class OpenML_Dataset(Dataset):
         else:
             print('TBD. Sorry for the inconvenience.')
 
-        #self.num_classes = torch.max(torch.unique(torch.from_numpy(y))) + 1
-        self.num_classes = len(np.unique(y)) # Maybe this could be better.
+        self.num_classes = len(np.unique(y))
 
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, train_size=self.tr_size, random_state=self.splitting_seed)
+            X, y, train_size = self.tr_size, random_state = self.splitting_seed)
         X_train = torch.from_numpy(X_train).to(torch.float32)
         X_test = torch.from_numpy(X_test).to(torch.float32)
         y_train = torch.from_numpy(y_train).to(torch.long)
