@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
 
-
-
-
 class CELoss(nn.Module):
     """
     Cross entropy loss. calculates the discrepancy between the prediction and the actual label. 
