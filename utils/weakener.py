@@ -250,7 +250,7 @@ class Weakener(object):
             lossf = cvxpy.sum_squares(p_est - self.M @ v_eta)
         '''
 
-    def label_matrix(M):
+    def label_matrix(self, M):
         """
         The objective of this function is twofold:
             1. It removes rows with no positive elements from M
@@ -308,7 +308,7 @@ class Weakener(object):
 
         return M, Z, labels
 
-    def pll_weights(c, p=0.5, anchor_points=False):
+    def pll_weights(self, c=None , p=0.5, anchor_points=False):
         """
         Descrip
 
@@ -327,7 +327,9 @@ class Weakener(object):
             >>> z
             out
         """
-        _, Z, _ = label_matrix(np.ones((2 ** c, c)))
+        if c is None:
+            c = self.c
+        _, Z, _ = self.label_matrix(np.ones((2 ** c, c)))
         probs = {0: 0}
         q = 1 - p
         
