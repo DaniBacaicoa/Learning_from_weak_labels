@@ -84,7 +84,7 @@ class OpenML_Dataset(Dataset):
                       'page-blocks': 30, 'yeast': 181, 'flags': 285,
                       'visualizing_livestock': 685, 'diggle_table_a2': 694,
                       'prnn_fglass': 952, 'confidence': 468, 'fl2000': 477,
-                      'blood-transfusion': 1464, ' banknote-authentication': 1462}
+                      'blood-transfusion': 1464, 'banknote-authentication': 1462}
         if self.dataset in openml_ids:
             data = openml.datasets.get_dataset(openml_ids[self.dataset])
             X, y, categorical, feature_names = data.get_data(
