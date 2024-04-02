@@ -35,6 +35,8 @@ class Torch_Dataset(Dataset):
         self.weak_labels = None
         self.batch_size = batch_size
         self.shuffle = shuffle
+        self.z = None
+        self.w = None
 
         if self.dataset == 'MNIST':
             self.transform = transforms.Compose([

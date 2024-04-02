@@ -180,6 +180,7 @@ class OpenML_Dataset(Dataset):
             y = self.train_dataset.targets[index]
             return x, w, y
 
+    '''
     def get_dataloader(self, indices=None):
         if indices is None:
             indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
@@ -190,6 +191,29 @@ class OpenML_Dataset(Dataset):
         else:
             tr_dataset = TensorDataset(self.train_dataset.data[indices], self.weak_labels[indices],
                                                      self.train_dataset.targets[indices], indices)
+
+        self.train_loader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=self.shuffle,
+                                                        num_workers=0)
+        self.test_loader = DataLoader(TensorDataset(
+            self.test_dataset.data, self.test_dataset.targets
+        ), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=0)
+        return self.train_loader, self.test_loader
+    '''
+    
+    def get_dataloader(self, indices=None):
+        if indices is None:
+            indices = torch.Tensor(list(range(len(self.train_dataset)))).to(torch.long)
+        if (self.weak_labels is None) & (self.virtual_labels is None):
+            tr_dataset = TensorDataset(self.train_dataset.data[indices],
+                                       self.train_dataset.targets[indices])
+        elif self.weak_labels is None:
+            tr_dataset_wk = TensorDataset(self.train_dataset.data[indices], 
+                                       self.virtual_labels[indices],
+                                       self.train_dataset.targets[indices])
+        else:
+            tr_dataset_v = TensorDataset(self.train_dataset.data[indices], 
+                                       self.weak_labels[indices],
+                                       self.train_dataset.targets[indices])
 
         self.train_loader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=self.shuffle,
                                                         num_workers=0)
@@ -211,6 +235,12 @@ class OpenML_Dataset(Dataset):
             self.weak_labels = z
         else:
             self.weak_labels = torch.from_numpy(z)
+    def include_virtual(self, vy):
+        if torch.is_tensor(vy):
+            self.virtual_labels = vy
+        else:
+            self.virtual_labels = torch.from_numpy(vy)
+
 
 class Torch_Dataset(Dataset):
     '''
