@@ -206,6 +206,16 @@ class Weakener(object):
             prob.solve()
             self.Y = hat_Y.value
 
+    def V_matrix(self, h, convex=True, scale = 1):
+        if convex:
+            V_ini = np.random.randn(h,self.d)
+        else:
+            print('A randn implemetation must be done')
+        one_c = np.ones((1,self.c)).T
+        VM = V_ini @ self.M
+        self.V = V_ini/(VM @ one)
+        return self.V
+
 
     def virtual_labels(self, y = None):
         '''
