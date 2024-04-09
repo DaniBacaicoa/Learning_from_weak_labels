@@ -242,22 +242,30 @@ class EMLoss(nn.Module):
 class FBLoss(nn.Module):
     def __init__(self, M, V):
         super(FBLoss, self).__init__()
-        self.logsoftmax = torch.nn.LogSoftmax(dim=1)
+        self.softmax = torch.nn.Softmax(dim=1)
         self.M = M
         self.V = V
         self.VM = V@M
         
     def forward(self,out,z):
-        logp = self.logsoftmax(out)
-
-        p = torch.exp(logp)
-        Q = p.detach() * torch.tensor(self.M[z])
-        Q /= torch.sum(Q,dim=1,keepdim=True)
-
-        L = -torch.sum(Q*logp)
+        p = self.logsoftmax(out)
+        #Loss L(z,f) = z'L(f) = z'V'phi(VMf)
+        L = -z.T@self.V.T@torch.log(self.VM@p)
 
         return L
 
+class BackwardLoss(nn.Module):
+    def __init__(self, M, V):
+        super(BackwardLoss, self).__init__()
+        self.softmax = torch.nn.Softmax(dim=1)
+        self.M = M
+        
+    def forward(self,out,z):
+        p = self.logsoftmax(out)
+        #Loss L(z,f) = z'L(f) = z'phi(Mf)
+        L = -z.T@torch.log(self.M@p)
+
+        return L
 
 class OSLCELoss(nn.Module):
     def __init__(self):
