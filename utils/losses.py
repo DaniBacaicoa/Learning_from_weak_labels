@@ -243,14 +243,15 @@ class FBLoss(nn.Module):
     def __init__(self, M, V):
         super(FBLoss, self).__init__()
         self.softmax = torch.nn.Softmax(dim=1)
-        self.M = torch.tensor(M)
-        self.V = torch.tensor(V)
-        self.VM = V@M
+        self.M = torch.tensor(M,dtype=torch.float32)
+        self.V = torch.tensor(V,dtype=torch.float32)
+        self.VM = self.V @ self.M
         
     def forward(self,out,z):
         p = self.softmax(out)
+        #print(p.dtype)
         #Loss L(z,f) = z'L(f) = z'V'phi(VMf)
-        L = -(self.V.T@torch.log(self.VM@p))[z]
+        L = -torch.sum((self.V.T @ torch.log(self.VM @ p.T))[z])
 
         return L
 
@@ -258,12 +259,12 @@ class ForwardLoss(nn.Module):
     def __init__(self, M):
         super(ForwardLoss, self).__init__()
         self.softmax = torch.nn.Softmax(dim=1)
-        self.M = torch.tensor(M)
+        self.M = torch.tensor(M,dtype=torch.float32)
         
     def forward(self,out,z):
         p = self.softmax(out)
         #Loss L(z,f) = z'L(f) = z'phi(Mf)
-        L = -(torch.log(self.M@p))[z]
+        L = -torch.sum((torch.log(self.M @ p.T))[z])
 
         return L
 
