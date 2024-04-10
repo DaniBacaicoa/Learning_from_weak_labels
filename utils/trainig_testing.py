@@ -78,7 +78,7 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
         running_loss = 0.0
         correct = 0
 
-        for inputs, vl, targets, ind in trainloader:
+        for inputs, vl, targets in trainloader:
             vl = vl.type(torch.LongTensor)
             optimizer.zero_grad()
             outputs = model(inputs)
