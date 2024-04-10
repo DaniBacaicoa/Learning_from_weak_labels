@@ -46,6 +46,8 @@ class Weakener(object):
         self.z = None
         self.w = None
 
+        self.Y = None
+
     def generate_M(self,  model_class='supervised', alpha=1, beta=None, pll_p = 0.5):
         '''
         Generates a corruption matrix (a transition matrix)
@@ -208,16 +210,16 @@ class Weakener(object):
 
     def V_matrix(self, h, convex=True, scale = 1):
         if convex:
-            V_ini = np.random.randn(h,self.d)
+            V_ini = np.random.rand(h,self.d)
         else:
             print('A randn implemetation must be done')
         one_c = np.ones((1,self.c)).T
         VM = V_ini @ self.M
-        self.V = V_ini/(VM @ one)
+        self.V = V_ini/(VM @ one_c)
         return self.V
 
 
-    def virtual_labels(self, y = None):
+    def virtual_labels(self, y = None, p=None, optimize = True, convex=True):
         '''
         z must be the weak label in the z form given by generate weak
         '''
@@ -227,7 +229,8 @@ class Weakener(object):
             if y is None:
                 raise NameError('The weak labels have not been yet created. You shuold give the true labels. Try:\n  class.virtual_labels(y)\n instead')
             _,_ = self.generate_weak(y)
-        self.virtual_matrix()
+        if self.Y is None:
+            self.virtual_matrix(p, optimize, convex)
         self.v = self.Y.T[self.z]
         return
 
