@@ -157,7 +157,7 @@ class LBLoss(nn.Module):
     def forward(self, inputs, targets):
         v = inputs - torch.mean(inputs, axis=1, keepdims=True)
         logp = self.logsoftmax(v)
-        L = - torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
+        L = - torch.sum(targets * logp) + 0.5 * self.k * torch.sum(torch.abs(v) ** self.beta)
         return L
 
 

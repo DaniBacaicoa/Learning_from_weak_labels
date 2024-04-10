@@ -15,12 +15,12 @@ f = open("Experimental_results/Datasets.pkl","rb")
 Data,Weak = pickle.load(f)
 f.close()
 
-Weak.virtual_labels(p=None, optimize = True, convex = True) #This is to create Virtual Labels
-#Data.include_weak(Weak.z)
-Data.include_virtual(Weak.v)
-trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
+#Weak.virtual_labels(p=None, optimize = False, convex = False) #This is to create Virtual Labels
+Data.include_weak(Weak.w)
+#Data.include_virtual(Weak.v)
+trainloader,testloader = Data.get_dataloader(weak_labels='weak')
 
-loss = losses.LBLoss(k=1,beta=1.2)
+loss = losses.OSLCELoss()
 overall_results = {}
 overall_models = {}
 epochs = 50
@@ -32,7 +32,7 @@ for i in range(10):
     overall_models[i] = mlp
 
 
-LBL = [overall_results,overall_models]
-f = open("Experimental_results/LBL.pkl","wb")
-pickle.dump(LBL,f)
+OSL = [overall_results,overall_models]
+f = open("Experimental_results/OSL.pkl","wb")
+pickle.dump(OSL,f)
 f.close()
