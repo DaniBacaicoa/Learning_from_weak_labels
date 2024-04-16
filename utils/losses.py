@@ -268,6 +268,33 @@ class ForwardLoss(nn.Module):
 
         return L
 
+class New_ForwardLoss(nn.Module):
+    def __init__(self, M):
+        super(New_ForwardLoss, self).__init__()
+        self.M = torch.tensor(M, dtype=torch.float32)
+        self.softmax = torch.nn.Softmax(dim=1)
+
+    def forward(self, out, z):
+        # No need to apply softmax if out already contains raw logits
+        # p = torch.softmax(out, dim=1) 
+
+        # Ensure z contains integer class indices
+        z = z.long()
+
+        # Compute softmax probabilities
+        # If out is raw logits, apply softmax, else assume out is already probabilities
+        p = self.softmax(out)
+
+        # Compute loss using matrix multiplication and logarithm
+        # Add epsilon for numerical stability
+        epsilon = 1e-10
+        log_prob = torch.log(torch.matmul(self.M, p.t()) + epsilon)
+        #L = -torch.sum(log_prob[torch.arange(len(z)), z])
+        L = -torch.sum(log_prob[z])
+
+
+        return L
+
 class OSLCELoss(nn.Module):
     def __init__(self):
         super(OSLCELoss, self).__init__()

@@ -4,6 +4,8 @@ import inspect
 #from utils.losses import PartialLoss
 import numpy as np
 
+import torch.autograd as autograd
+
 
 def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model=False):
     model.train()
@@ -87,6 +89,76 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
             else:
                 loss = loss_fn(outputs, vl)
             loss.backward()
+            optimizer.step()
+
+            # Update batche's loss and acc
+            running_loss += loss.item()
+            _, preds = torch.max(outputs, dim=1)
+            _, true = torch.max(targets, dim=1)
+            correct += torch.sum(preds == true)
+
+        # loss and acc per epoch
+        train_acc = correct.double() / len(trainloader.dataset)
+        train_loss = running_loss / len(trainloader.dataset)
+
+        train_losses[epoch] = train_loss
+        train_accs[epoch] = train_acc
+
+        # Evaluate the model on the test set
+        test_acc = evaluate_model(model, testloader, sound=False)
+        test_accs[epoch] = test_acc
+
+        if epoch % sound == sound-1:
+
+            print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
+                  .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
+
+    # Save the training and test results in a pickle file
+    results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs}
+    #with open('results.pkl', 'wb') as f:
+    #    pickle.dump(results, f)
+
+    return model, results
+
+
+def train_and_evaluate_gradients(model, trainloader, testloader, optimizer, loss_fn, num_epochs, sound = 10):
+    train_losses = torch.zeros(num_epochs)
+    train_accs = torch.zeros(num_epochs)
+    test_accs = torch.zeros(num_epochs)
+
+    torch.autograd.set_detect_anomaly(True)
+
+    for epoch in range(num_epochs):
+        model.train()
+
+        running_loss = 0.0
+        correct = 0
+
+        for inputs, vl, targets in trainloader:
+            vl = vl.type(torch.LongTensor)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            if len(inspect.getfullargspec(loss_fn.forward).args)>3:
+                loss = loss_fn(outputs, vl, ind)
+            else:
+                loss = loss_fn(outputs, vl)
+
+
+            loss.backward(retain_graph=True)
+            grad_norm = torch.norm(torch.stack([torch.norm(p.grad.detach()) for p in model.parameters()]))
+            if torch.isnan(grad_norm) or torch.isinf(grad_norm):
+                print("Gradient is NaN or Inf!")
+            else:
+                print("Gradient Norm:", grad_norm.item())
+            try:
+                check_result = autograd.gradcheck(loss_fn, (outputs, vl), eps=1e-5)
+                if not check_result:
+                    print("Gradient check failed!")
+                else:
+                    print("Gradient check passed.")
+            except Exception as e:
+                print("Error during gradient check:", e)
+            
             optimizer.step()
 
             # Update batche's loss and acc
