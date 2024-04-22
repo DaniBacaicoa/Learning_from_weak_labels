@@ -74,6 +74,9 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
 
     torch.autograd.set_detect_anomaly(True)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
     for epoch in range(num_epochs):
         model.train()
 
@@ -82,6 +85,9 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
 
         for inputs, vl, targets in trainloader:
             vl = vl.type(torch.LongTensor)
+            inputs, vl, targets = inputs.to(device), vl.to(device), targets.to(device)
+            
+            
             optimizer.zero_grad()
             outputs = model(inputs)
             if len(inspect.getfullargspec(loss_fn.forward).args)>3:

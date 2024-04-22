@@ -23,8 +23,10 @@ trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
 loss = losses.CELoss()
 overall_results = {}
 overall_models = {}
-epochs = 50
-for i in range(10):
+
+reps = 3
+epochs = 10
+for i in range(reps):
     mlp = MLP(Data.num_features,[Data.num_features],Data.num_classes, dropout_p=0.5, bn=True, activation =  'gelu')
     optim = torch.optim.Adam(mlp.parameters(),lr=1e-2)
     mlp, results = train_and_evaluate(mlp,trainloader,testloader,optimizer=optim,loss_fn=loss,num_epochs=epochs,sound=1)
