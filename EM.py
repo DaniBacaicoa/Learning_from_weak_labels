@@ -19,8 +19,10 @@ f.close()
 Data.include_weak(Weak.z)
 #Data.include_virtual(Weak.v)
 trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-loss = losses.EMLoss(Weak.M)
+M = torch.from_numpy(Weak.M).to(device)
+loss = losses.EMLoss(M)
 overall_results = {}
 overall_models = {}
 

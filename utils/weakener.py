@@ -197,7 +197,7 @@ class Weakener(object):
             ),
                 [hat_Y @ self.M == I_c, hat_Y.T @ c_1 == d_1]
             )
-            prob.solve()
+            prob.solve(solver=cvxpy.CLARABEL)
             self.Y = hat_Y.value
         else:
             prob = cvxpy.Problem(cvxpy.Minimize(
@@ -205,7 +205,7 @@ class Weakener(object):
             ),
                 [hat_Y @ self.M == I_c]
             )
-            prob.solve()
+            prob.solve(solver=cvxpy.CLARABEL)
             self.Y = hat_Y.value
 
     def V_matrix(self, h, convex=True, scale = 1):
@@ -249,7 +249,7 @@ class Weakener(object):
 
         problem = cvxpy.Problem(cvxpy.Minimize(lossf),
                                 [v_eta >= 0, np.ones(self.c) @ v_eta == 1])
-        problem.solve()
+        problem.solve(solver=cvxpy.CLARABEL)
 
         # Compute the wl prior estimate
         p_reg = self.M @ v_eta.value

@@ -49,9 +49,11 @@ def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model
 def evaluate_model(model, testloader, sound = True):
     model.eval()
     correct = 0
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     with torch.no_grad():
         for inputs, targets in testloader:
+            inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
 
             _, preds = torch.max(outputs, dim=1)
