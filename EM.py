@@ -11,7 +11,7 @@ from models.model import MLP
 from utils.trainig_testing import train_and_evaluate
 
 import pickle
-f = open("Experimental_results/Datasets.pkl","rb")
+f = open("Experimental_results(0.5)/Datasets.pkl","rb")
 Data,Weak = pickle.load(f)
 f.close()
 
@@ -37,6 +37,6 @@ for i in range(reps):
 
 
 EM = [overall_results,overall_models]
-f = open("Experimental_results/EM.pkl","wb")
+f = open("Experimental_results(0.5)/EM.pkl","wb")
 pickle.dump(EM,f)
 f.close()
