@@ -36,7 +36,7 @@ def main(reps, epochs, dropout_p, loss_type, save_dir, pll_p, k=1, beta=1.2):
     elif loss_type == 'ForwardBackward':
         loss_fn = losses.FBLoss(Weak.M, V)
     else:
-        raise ValueError("Invalid loss type. Supported types are 'CELoss' and 'YourCustomLoss'.")
+        raise ValueError("Invalid loss type. Check the spelling")
 
     overall_results = {}
     overall_models = {}

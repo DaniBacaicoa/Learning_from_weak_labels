@@ -68,6 +68,28 @@ def evaluate_model(model, testloader, sound = True):
         print('Evaluation Accuracy: {:.4f}'.format(accuracy))
     return accuracy
 
+def train_loss_eval(model, trainloader, sound = True):
+    model.eval()
+    correct = 0
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    with torch.no_grad():
+        for inputs, targets in testloader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+
+            _, preds = torch.max(outputs, dim=1)
+            _, true = torch.max(targets, dim=1)
+            correct += torch.sum(preds == true)
+
+    #Accuracy
+    accuracy = correct.double() / len(testloader.dataset)
+
+    # Print the accuracy if not in another function
+    if sound:
+        print('Evaluation Accuracy: {:.4f}'.format(accuracy))
+    return accuracy
+
 
 def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_epochs, sound = 10):
     train_losses = torch.zeros(num_epochs)
@@ -83,6 +105,7 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
         model.train()
 
         running_loss = 0.0
+        running_ce = 0.0
         correct = 0
 
         for inputs, vl, targets in trainloader:
@@ -92,10 +115,11 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
             
             optimizer.zero_grad()
             outputs = model(inputs)
-            if len(inspect.getfullargspec(loss_fn.forward).args)>3:
-                loss = loss_fn(outputs, vl, ind)
-            else:
-                loss = loss_fn(outputs, vl)
+            #if len(inspect.getfullargspec(loss_fn.forward).args)>3:
+            #    loss = loss_fn(outputs, vl, ind)
+            #else:
+            #    loss = loss_fn(outputs, vl)
+            loss = loss_fn(outputs, vl)
             loss.backward()
             optimizer.step()
 
