@@ -5,6 +5,7 @@ import inspect
 import numpy as np
 
 import torch.autograd as autograd
+import torch
 
 
 def train_model(model, trainloader, optimizer, loss_fn, num_epochs, return_model=False):
@@ -95,6 +96,7 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
     train_losses = torch.zeros(num_epochs)
     train_accs = torch.zeros(num_epochs)
     test_accs = torch.zeros(num_epochs)
+    train_detached_losses = torch.zeros(num_epochs)
 
     torch.autograd.set_detect_anomaly(True)
 
@@ -145,8 +147,19 @@ def train_and_evaluate(model, trainloader, testloader, optimizer, loss_fn, num_e
             print('Epoch {}/{}: Train Loss: {:.4f}, Train Acc: {:.4f}, Test Acc: {:.4f}'
                   .format(epoch+1, num_epochs, train_loss, train_acc, test_acc))
 
+
+        with torch.no_grad():
+            detached_loss = 0.0
+            det_loss = torch.nn.CrossEntropyLoss()
+            for inputs, vl, targets in trainloader:
+                inputs, vl, targets = inputs.to(device), vl.to(device), targets.to(device)
+                outputs = model(inputs)
+                detached_loss += det_loss(outputs, targets).item()
+            detached_loss /= len(trainloader.dataset)
+            train_detached_losses[epoch] = detached_loss
+
     # Save the training and test results in a pickle file
-    results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs}
+    results = {'train_loss': train_losses, 'train_acc': train_accs, 'test_acc': test_accs,  'train_detached_loss': train_detached_losses}
     #with open('results.pkl', 'wb') as f:
     #    pickle.dump(results, f)
 
