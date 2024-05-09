@@ -86,18 +86,20 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         mlp = MLP(Data.num_features, [Data.num_features], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'tanh')
         optim = torch.optim.Adam(mlp.parameters(), lr = lr, betas = betas)
         mlp, results = train_and_evaluate(mlp, trainloader, testloader, optimizer=optim, loss_fn=loss_fn, num_epochs=epochs, sound=1)
-        overall_results[i] = results
+        print(results)
+
+        overall_results[i] = results.numpy()
         overall_models[i] = mlp
 
     # Save results
     results_dict = {'overall_results': overall_results, 'overall_models': overall_models}
     json_results_dict['results'] = overall_results
     save_path = os.path.join(save_dir, f'{loss_type}.pkl')
-    jon_save_path = os.path.join(save_dir, f'json_{loss_type}.json')
+    json_save_path = os.path.join(save_dir, f'json_{loss_type}.json')
     with open(save_path, "wb") as f:
         pickle.dump(results_dict, f)
-    with open(jon_save_path, "w") as f:
-        json.dump(json_results_dict, f)
+    #with open(json_save_path, "w") as f:
+    #    json.dump(json_results_dict, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train and evaluate MLP model')
