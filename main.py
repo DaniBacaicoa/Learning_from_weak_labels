@@ -69,11 +69,13 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         Data.include_virtual(Weak.v)
         trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
     elif loss_type == 'Forward':
-        loss_fn = losses.ForwardLoss(V)
+        loss_fn = losses.ForwardLoss(Weak.M)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'ForwardBackward':
-        loss_fn = losses.FBLoss(Weak.M, V)
+        #Weak.V_matrix(Data.num_classes)
+        Y = np.linalg.pinv(Weak.M)
+        loss_fn = losses.FBLoss(Weak.M, Y)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     else:
@@ -83,12 +85,15 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
     overall_models = {}
 
     for i in range(reps):
+        np_results = {}
         mlp = MLP(Data.num_features, [Data.num_features], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'tanh')
         optim = torch.optim.Adam(mlp.parameters(), lr = lr, betas = betas)
         mlp, results = train_and_evaluate(mlp, trainloader, testloader, optimizer=optim, loss_fn=loss_fn, num_epochs=epochs, sound=1)
         print(results)
+        for i in results:
+            np_results[i] = results[i].numpy()
 
-        overall_results[i] = results.numpy()
+        overall_results[i] = np_results
         overall_models[i] = mlp
 
     # Save results
@@ -114,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('--k', type = float, default = 1, help = 'Hyperparameter for LBL (lower bounded loss)')
     parser.add_argument('--beta', type = float, default = 1.2, help = 'Hyperparameter for LBL (lower bounded loss)')
     parser.add_argument('--lr', type = float, default = 1e-3, help = 'Learning rate for the optimization algorithm')
-    parser.add_argument('--betas', type = tuple, default = (0.8, 0.99), help = 'betas parameter for Adam optimizer')
+    parser.add_argument('--betas', type = tuple, default = (0.9, 0.999), help = 'betas parameter for Adam optimizer')
     args = parser.parse_args()
 
     main(args.reps, args.epochs, args.dropout, args.loss, args.pll, args.k, args.beta, args.lr, args.betas)
