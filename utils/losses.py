@@ -259,12 +259,13 @@ class ForwardLoss(nn.Module):
     def __init__(self, M):
         super(ForwardLoss, self).__init__()
         self.softmax = torch.nn.Softmax(dim=1)
-        self.M = torch.tensor(M,dtype=torch.float32)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.M = torch.tensor(M,dtype=torch.float32).to(device).detach()
         
     def forward(self,out,z):
         p = self.softmax(out)
         #Loss L(z,f) = z'L(f) = z'phi(Mf)
-        L = -torch.sum((torch.log(self.M @ p.T))[z])
+        L = -torch.mean((torch.log(self.M @ p.T))[z])
 
         return L
 
