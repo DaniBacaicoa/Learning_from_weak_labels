@@ -268,6 +268,37 @@ class ForwardLoss(nn.Module):
         L = -torch.mean((torch.log(self.M @ p.T))[z])
 
         return L
+    
+
+class ForwardLoss_gpt4o(nn.Module):
+    def __init__(self, M):
+        super(ForwardLoss, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.M = torch.tensor(M, dtype=torch.float32).to(device)
+
+    def forward(self, out, z):
+        p = self.softmax(out)
+        
+        # Ensure z is of type long for indexing
+        z = z.long()
+
+        # Matrix multiplication
+        Mp = self.M @ p.T
+        
+        # Add a small epsilon to avoid log(0)
+        epsilon = 1e-10
+        L = -torch.mean(torch.log(Mp[z, range(Mp.size(1))] + epsilon))
+
+        return L
+
+# Example usage:
+# M is a predefined matrix
+# M = ...
+# loss_fn = ForwardLoss(M)
+# out = ...  # output from the model
+# z = ...    # target indices
+# loss = loss_fn(out, z)
 
 class New_ForwardLoss(nn.Module):
     def __init__(self, M):
