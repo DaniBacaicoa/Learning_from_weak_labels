@@ -69,7 +69,7 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         Data.include_virtual(Weak.v)
         trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
     elif loss_type == 'Forward':
-        loss_fn = losses.ForwardLoss(Weak.M)
+        loss_fn = losses.ForwardLoss_gpt4o(Weak.M)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'ForwardBackward':

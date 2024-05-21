@@ -255,6 +255,39 @@ class FBLoss(nn.Module):
 
         return L
 
+class FBLoss_gpt4o(nn.Module):
+    def __init__(self, M, V):
+        super(FBLoss_gpt4o, self).__init__()
+        self.softmax = torch.nn.Softmax(dim=1)
+        
+        # Move tensors to appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.M = torch.tensor(M, dtype=torch.float32).to(device)
+        self.V = torch.tensor(V, dtype=torch.float32).to(device)
+        self.VM = self.V @ self.M
+
+    def forward(self, out, z):
+        # Ensure z is of type long for indexing
+        z = z.long()
+
+        # Softmax output
+        p = self.softmax(out)
+        
+        # Matrix multiplication
+        VMp = self.VM @ p.T
+        
+        # Add a small epsilon to avoid log(0)
+        epsilon = 1e-10
+        log_VM_p = torch.log(VMp + epsilon)
+        
+        # Matrix multiplication with V transpose
+        V_log_VM_p = self.V.T @ log_VM_p
+        
+        # Calculate the loss
+        L = -torch.sum(V_log_VM_p[z, range(V_log_VM_p.size(1))])
+
+        return L
+
 class ForwardLoss(nn.Module):
     def __init__(self, M):
         super(ForwardLoss, self).__init__()
@@ -272,7 +305,7 @@ class ForwardLoss(nn.Module):
 
 class ForwardLoss_gpt4o(nn.Module):
     def __init__(self, M):
-        super(ForwardLoss, self).__init__()
+        super(ForwardLoss_gpt4o, self).__init__()
         self.softmax = nn.Softmax(dim=1)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.M = torch.tensor(M, dtype=torch.float32).to(device)
