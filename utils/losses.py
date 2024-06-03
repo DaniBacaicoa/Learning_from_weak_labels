@@ -161,6 +161,39 @@ class LBLoss(nn.Module):
         return L
 
 
+class LBLoss_gpt4o(nn.Module):
+    def __init__(self, k=1, beta=1):
+        super(LBLoss_gpt4o, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.k = k
+        self.beta = beta
+
+    def forward(self, inputs, targets):
+        # Ensure inputs and targets are on the same device
+        device = inputs.device
+        targets = targets.to(device)
+
+        # Centering the inputs
+        v = inputs - torch.mean(inputs, axis=1, keepdims=True)
+        
+        # Compute log-softmax
+        logp = self.logsoftmax(v)
+        
+        # Compute the loss
+        L = - torch.sum(targets * logp) + 0.5 * self.k * torch.sum(torch.abs(v) ** self.beta)
+        
+        # Normalize by the batch size
+        batch_size = inputs.size(0)
+        L = L / batch_size
+        
+        return L
+
+# Example usage:
+# loss_fn = LBLoss(k=1, beta=1)
+# inputs = ...  # model predictions
+# targets = ...  # true labels in one-hot format
+# loss = loss_fn(inputs, targets)
+
 
 class R_CELoss(nn.Module):
     def __init__(self, reg_weight = 0.1, reg_type = 1):
@@ -277,7 +310,7 @@ class FBLoss_gpt4o(nn.Module):
         VMp = self.VM @ p.T
         
         # Add a small epsilon to avoid log(0)
-        epsilon = 1e-10
+        epsilon = 1e-8
         log_VM_p = torch.log(VMp + epsilon)
         
         # Matrix multiplication with V transpose
@@ -366,14 +399,20 @@ class OSLCELoss(nn.Module):
         self.logsoftmax = torch.nn.LogSoftmax(dim = 1)
 
     def hardmax(self, A):
-        D = torch.eq(A, torch.max(A, axis=1, keepdims=True)[0])
-        return D / torch.sum(D, axis=1, keepdims=True)
+        #D = torch.eq(A, torch.max(A, axis=1, keepdims=True)[0])
+        D = torch.eq(A, torch.max(A, axis=1, keepdims=True).values)
+        return D.float() / torch.sum(D, axis=1, keepdims=True)
 
     def forward(self, inputs, targets):
         logp = self.logsoftmax(inputs)
         p = torch.exp(logp)
+        num_classes = inputs.size(1)
+
+        if targets.ndim == 1 or targets.size(1) == 1:
+            targets = torch.nn.functional.one_hot(targets, num_classes=inputs.size(1)).float()
+
         D = self.hardmax(targets * p)
-        L = - torch.sum(D*logp)
+        L = - torch.sum(D*logp)/ inputs.size(0)# Normalize by batch size
         return L
 
 class OSLBrierLoss(nn.Module):
