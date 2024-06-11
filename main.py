@@ -61,10 +61,10 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'OSL':
         loss_fn = losses.OSLCELoss()
-        Data.include_weak(Weak.z)
+        Data.include_weak(Weak.w)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'LBL':
-        loss_fn = losses.LBLoss(k, beta)
+        loss_fn = losses.LBLoss_gpt4o(k, beta)
         Weak.virtual_labels(p=None, optimize = True, convex = True)
         Data.include_virtual(Weak.v)
         trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
@@ -73,9 +73,9 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'ForwardBackward':
-        #Weak.V_matrix(Data.num_classes)
+        Weak.V_matrix(Data.num_classes)
         Y = np.linalg.pinv(Weak.M)
-        loss_fn = losses.FBLoss(Weak.M, Y)
+        loss_fn = losses.FBLoss_gpt4o(Weak.M, Y)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     else:
