@@ -297,6 +297,7 @@ class FBLoss_gpt4o(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.M = torch.tensor(M, dtype=torch.float32).to(self.device)
         self.V = torch.tensor(V, dtype=torch.float32).to(self.device)
+        print(self.M.shape)
         self.VM = self.V @ self.M
 
     def forward(self, out, z):
@@ -305,7 +306,7 @@ class FBLoss_gpt4o(nn.Module):
 
         # Softmax output
         p = self.softmax(out).to(self.device)
-        
+        print(p.shape)
         # Matrix multiplication
         VMp = self.VM @ p.T
         

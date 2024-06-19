@@ -13,7 +13,7 @@ from Dataset_generation import generate_dataset
 import pickle
 import json
 
-def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, betas = (0.8, 0.99)):
+def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, betas = (0.8, 0.99), V=None):
 
     json_results_dict = {
         'arguments': {
@@ -72,10 +72,22 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         loss_fn = losses.ForwardLoss_gpt4o(Weak.M)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'ForwardBackward':
+    elif loss_type == 'ForwardBackward_Y':
         Weak.V_matrix(Data.num_classes)
         Y = np.linalg.pinv(Weak.M)
         loss_fn = losses.FBLoss_gpt4o(Weak.M, Y)
+        Data.include_weak(Weak.z)
+        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+    elif loss_type == 'ForwardBackward_I':
+        #Weak.V_matrix(Data.num_classes)
+        #Y = np.linalg.pinv(Weak.M)
+        loss_fn = losses.FBLoss_gpt4o(Weak.M, np.identity(Weak.d))
+        Data.include_weak(Weak.z)
+        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+    elif loss_type == 'ForwardBackward_V':
+        Weak.V_matrix(Data.num_classes)
+        #Y = np.linalg.pinv(Weak.M)
+        loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
         Data.include_weak(Weak.z)
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     else:
@@ -112,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument('-e','--epochs', type = int, default = 15, help = 'Number of epochs')
     parser.add_argument('-dp', '--dropout', type = float, default = 0.5, help = 'Dropout probability')
     parser.add_argument('-l','--loss', type = str, default = 'Back', 
-                        choices=['Back','Back_conv','Back_opt','Back_opt_conv','EM','OSL','LBL','Forward','ForwardBackward'],
+                        choices=['Back','Back_conv','Back_opt','Back_opt_conv','EM','OSL','LBL','Forward','ForwardBackward_I','ForwardBackward_Y','ForwardBackward_V'],
                         help='Type of loss reconstruction')
     #parser.add_argument('-d', '--save_dir', type = str, default = 'Experimental_results', help = 'Directory to save results')
     parser.add_argument('--pll', type = float, help = 'Probability of corrupted samples in the dataset')
