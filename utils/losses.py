@@ -310,7 +310,7 @@ class FBLoss_gpt4o(nn.Module):
         VMp = self.VM @ p.T
         
         # Add a small epsilon to avoid log(0)
-        epsilon = 1e-8
+        epsilon = 1e-6
         log_VM_p = torch.log(VMp + epsilon)
         
         # Matrix multiplication with V transpose

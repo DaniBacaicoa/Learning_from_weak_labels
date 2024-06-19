@@ -127,3 +127,6 @@ if __name__ == "__main__":
 
 #To acces main's hepl:
 # python main.py --help
+
+# To run experiments 
+# python main.py --reps 2 --epochs 5 --loss Back --pll 0.2 
