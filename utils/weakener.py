@@ -209,13 +209,16 @@ class Weakener(object):
             self.Y = hat_Y.value
 
     def V_matrix(self, h, convex=True, scale = 1):
-        if convex:
-            V_ini = np.random.rand(h,self.d)
-        else:
-            print('A randn implemetation must be done')
-        one_c = np.ones((1,self.c)).T
-        VM = V_ini @ self.M
-        self.V = V_ini/(VM @ one_c)
+        #if convex:
+        #    V_ini = np.random.rand(h,self.d)
+        #else:
+        #    print('A randn implemetation must be done')
+        #one_c = np.ones((1,self.c)).T
+        #VM = V_ini @ self.M
+        #self.V = V_ini/(VM @ one_c)
+        rng = np.random.default_rng()
+        self.V = np.array([list(rng.dirichlet(self.M[:,i], 1).squeeze()) for i in range(self.M.shape[1])])
+        #print(self.V.shape)
         return self.V
 
 

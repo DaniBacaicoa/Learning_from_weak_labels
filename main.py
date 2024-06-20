@@ -86,6 +86,7 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         trainloader,testloader = Data.get_dataloader(weak_labels='weak')
     elif loss_type == 'ForwardBackward_V':
         Weak.V_matrix(Data.num_classes)
+        # Try a non-informative fdirichlet. And try a dirichlet that comes from the pseudoinverse
         #Y = np.linalg.pinv(Weak.M)
         loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
         Data.include_weak(Weak.z)
