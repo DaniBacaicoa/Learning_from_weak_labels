@@ -104,9 +104,9 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
         mlp, results = train_and_evaluate(mlp, trainloader, testloader, optimizer=optim, loss_fn=loss_fn, num_epochs=epochs, sound=1)
         print(results)
         for i in results:
-            np_results[i] = results[i].numpy()
+            results[i] = results[i].numpy()
 
-        overall_results[i] = np_results
+        overall_results[i] = results
         overall_models[i] = mlp
 
     # Save results
