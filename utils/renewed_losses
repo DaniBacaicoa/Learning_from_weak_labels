@@ -1,0 +1,230 @@
+import torch
+import torch.nn as nn
+
+class CELoss(nn.Module):
+    """
+    Cross entropy loss. Calculates the discrepancy between the prediction and the actual label. 
+    loss = -y log(f)
+
+    Example:
+        >>> loss_function = CELoss()
+        >>> inputs = torch.tensor([[1.2, 0.5, -0.8],[0.1, 0.3, 0.6]])
+        >>> targets = torch.tensor([[0, 1, 0],[1, 0, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+        tensor(1.2096)
+    """
+    def __init__(self):
+        super(CELoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+
+    def forward(self, inputs, targets):
+        v = inputs - torch.mean(inputs, dim=1, keepdim=True)
+        logp = self.logsoftmax(v)
+        L = -torch.sum(targets * logp) / inputs.size(0) # Normalize by batch size
+        return L
+
+class BrierLoss(nn.Module):
+    """
+    Brier loss. Calculates the mean squared error between the predicted probabilities and the actual label.
+
+    Example:
+        >>> loss_function = BrierLoss()
+        >>> inputs = torch.tensor([[0.9, 0.05, 0.05],
+                                   [0.2, 0.3, 0.5]])
+        >>> targets = torch.tensor([[1, 0, 0],
+                                    [0, 1, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+        tensor(0.0675)
+    """
+    def __init__(self):
+        super(BrierLoss, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, inputs, targets):
+        v = inputs - torch.mean(inputs, dim=1, keepdim=True)
+        p = self.softmax(v)
+        L = torch.sum((targets - p) ** 2) / inputs.size(0)
+        return L
+
+class GumbelLoss(nn.Module):
+    """
+    Gumbel Loss. 
+
+    Example:
+        >>> loss_function = GumbelLoss()
+        >>> inputs = torch.tensor([[0.1, 0.3, 1.1],
+                                   [0.5, 0.2, 0.9]])
+        >>> targets = torch.tensor([[1, 0, 0],
+                                    [0, 1, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+    """
+    def __init__(self, temperature=0.5, eps=1e-10):
+        super(GumbelLoss, self).__init__()
+        self.temperature = temperature
+        self.eps = eps
+
+    def forward(self, inputs, targets):
+        y = self.gumbel_softmax(inputs)
+        L = -torch.mean(targets * torch.log(y + self.eps)) #/ inputs.size(0)
+        return L
+
+    def gumbel_softmax(self, logits):
+        # Sample from gumbel ditribution (G = F^{-1}(U))
+        u = torch.rand_like(logits)
+        g = -torch.log(-torch.log(u + self.eps))
+        # Gumbel-Softmax trick
+        g = (g + logits) / self.temperature
+        y = nn.functional.softmax(g, dim=-1)
+        return y
+
+class LBLoss(nn.Module):
+    """
+    Lower Bounded Loss. Combines cross-entropy loss with an additional regularization term.
+    
+    loss = -y log(f) + 0.5 * k * sum(abs(v) ** beta)
+
+    Args:
+        k (float): Regularization strength parameter. Default is 1.
+        beta (float): Exponent for regularization term. Default is 1.
+
+    Example:
+        >>> loss_function = LBLoss(k=1, beta=1)
+        >>> inputs = torch.tensor([[1.2, 0.5, -0.8], [0.1, 0.3, 0.6]])
+        >>> targets = torch.tensor([[0, 1, 0], [1, 0, 0]])
+        >>> loss = loss_function(inputs, targets)
+        >>> print(loss)
+        tensor(1.6973)
+    """
+    def __init__(self, k=1, beta=1):
+        super(LBLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.k = k
+        self.beta = beta
+
+    def forward(self, inputs, targets):
+        v = inputs - torch.mean(inputs, dim=1, keepdim=True)
+        logp = self.logsoftmax(v)
+        L = -torch.sum(targets * logp) + 0.5 * self.k * torch.sum(torch.abs(v) ** self.beta)
+        return L / inputs.size(0)
+
+
+
+class EMLoss(nn.Module):
+    def __init__(self, M):
+        super(EMLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.M = torch.tensor(M, dtype=torch.float32)
+
+    def forward(self, out, z):
+        logp = self.logsoftmax(out)
+        p = torch.exp(logp)
+        Q = p.detach() * self.M[z]
+        Q /= torch.sum(Q, dim=1, keepdim=True)
+        L = -torch.sum(Q * logp) / out.size(0)
+        return L
+
+class FBLoss(nn.Module):
+    def __init__(self, M, V):
+        super(FBLoss, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+        self.M = torch.tensor(M, dtype=torch.float32)
+        self.V = torch.tensor(V, dtype=torch.float32)
+        self.VM = self.V @ self.M
+
+    def forward(self, out, z):
+        p = self.softmax(out)
+        L = -torch.sum((self.V.T @ torch.log(self.VM @ p.T + 1e-8))[z, range(p.size(0))]) / out.size(0)
+        return L
+
+class ForwardLoss(nn.Module):
+    def __init__(self, M):
+        super(ForwardLoss, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+        self.M = torch.tensor(M, dtype=torch.float32)
+
+    def forward(self, out, z):
+        p = self.softmax(out)
+        L = -torch.mean(torch.log(self.M @ p.T + 1e-8)[z])
+        return L
+
+class New_ForwardLoss(nn.Module):
+    def __init__(self, M):
+        super(New_ForwardLoss, self).__init__()
+        self.M = torch.tensor(M, dtype=torch.float32)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, out, z):
+        z = z.long()
+        p = self.softmax(out)
+        log_prob = torch.log(torch.matmul(self.M, p.t()) + 1e-8)
+        L = -torch.sum(log_prob[z]) / out.size(0)
+        return L
+
+class OSLCELoss(nn.Module):
+    def __init__(self):
+        super(OSLCELoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+
+    def hardmax(self, A):
+        D = torch.eq(A, torch.max(A, dim=1, keepdim=True).values)
+        return D.float() / torch.sum(D, dim=1, keepdim=True)
+
+    def forward(self, inputs, targets):
+        logp = self.logsoftmax(inputs)
+        p = torch.exp(logp)
+        num_classes = inputs.size(1)
+        if targets.ndim == 1 or targets.size(1) == 1:
+            targets = nn.functional.one_hot(targets, num_classes=num_classes).float()
+        D = self.hardmax(targets * p)
+        L = -torch.sum(D * logp) / inputs.size(0)
+        return L
+
+class OSLBrierLoss(nn.Module):
+    def __init__(self):
+        super(OSLBrierLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+
+    def hardmax(self, A):
+        D = torch.eq(A, torch.max(A, dim=1, keepdim=True).values)
+        return D / torch.sum(D, dim=1, keepdim=True)
+
+    def forward(self, inputs, targets):
+        p = torch.exp(self.logsoftmax(inputs))
+        D = self.hardmax(targets * p)
+        L = torch.sum((D - p) ** 2) / (2 * inputs.size(0))
+        return L
+    
+### Regularized losses (not in use at this moment) ####
+class R_CELoss(nn.Module):
+    def __init__(self, reg_weight=0.1, reg_type=1):
+        super(R_CELoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.reg_weight = reg_weight
+        self.reg_type = reg_type
+
+    def forward(self, inputs, targets, model):
+        v = inputs - torch.mean(inputs, dim=1, keepdim=True)
+        logp = self.logsoftmax(v)
+        L = -torch.sum(targets * logp)
+        reg = sum(torch.norm(param, self.reg_type) for param in model.parameters())
+        return (L + self.reg_weight * reg) / inputs.size(0)
+
+
+class R_LBLoss(nn.Module):
+    def __init__(self, k=1, beta=1, reg_weight=0.1, reg_type=2):
+        super(R_LBLoss, self).__init__()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.k = k
+        self.beta = beta
+        self.reg_weight = reg_weight
+        self.reg_type = reg_type
+
+    def forward(self, inputs, targets, model):
+        v = inputs - torch.mean(inputs, dim=1, keepdim=True)
+        logp = self.logsoftmax(v)
+        L = -torch.sum(targets * logp) + self.k * torch.sum(torch.abs(v) ** self.beta)
+        reg = sum(torch.norm(param, self.reg_type) for param in model.parameters())
+        return (L + self.reg_weight * reg) / inputs.size(0)
