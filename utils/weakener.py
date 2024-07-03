@@ -208,7 +208,7 @@ class Weakener(object):
             prob.solve(solver=cvxpy.CLARABEL)
             self.Y = hat_Y.value
 
-    def V_matrix(self, h, convex=True, scale = 1):
+    def V_matrix(self, h, convex=True, scale = 1, method = None):
         #if convex:
         #    V_ini = np.random.rand(h,self.d)
         #else:
@@ -217,7 +217,21 @@ class Weakener(object):
         #VM = V_ini @ self.M
         #self.V = V_ini/(VM @ one_c)
         rng = np.random.default_rng()
-        self.V = np.array([list(rng.dirichlet(self.M[:,i], 1).squeeze()) for i in range(self.M.shape[1])])
+        if method == 'M':
+            self.V = np.array([list(rng.dirichlet(self.M[i,:], 1).squeeze()) for i in range(self.d)]).T
+            #self.V = np.array([list(rng.dirichlet(self.M[:,i], 1).squeeze()) for i in range(self.M.shape[1])])
+        elif method == 'Y':
+            def softmax(x):
+                e_x = np.exp(x - np.max(x))
+                return e_x / e_x.sum(axis=0) 
+            self.V = np.array([list(rng.dirichlet(softmax(self.Y[:,i]), 1).squeeze()) for i in range(self.d)]).T
+        elif method == 'sI':
+            self.V = np.array([list(rng.dirichlet(np.ones(self.c), 1).squeeze()) for i in range(self.d)]).T
+        elif method == 'bI':
+            self.V = np.array([list(rng.dirichlet(np.ones(self.d), 1).squeeze()) for i in range(self.d)]).T
+        elif method == 'mI':
+            h = int((self.d+self.c)/2)
+            self.V = np.array([list(rng.dirichlet(np.ones(h), 1).squeeze()) for i in range(self.d)]).T
         #print(self.V.shape)
         return self.V
 

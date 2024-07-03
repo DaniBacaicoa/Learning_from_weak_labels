@@ -35,69 +35,97 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
         #This is for creating an mnist dataset inside the folder if it does'nt exist
-        generate_dataset(save_dir, pll_p = pll_p,) #This
+        for i in range(reps):
+            generate_dataset(save_dir, pll_p = pll_p, number=i) #This
 
-    #Reading the mnist dataset so all losses work with the same data
-    f = open(save_dir + "/Dataset.pkl","rb")
-    Data,Weak = pickle.load(f)
-    f.close()
 
-    # Choose loss function 
-    if loss_type in ['Back','Back_conv','Back_opt','Back_opt_conv']:
-        loss_fn = losses.CELoss()
-        if loss_type == 'Back':
-            Weak.virtual_labels(p=None, optimize = False, convex = False)
-        elif loss_type == 'Back_opt':
-            Weak.virtual_labels(p=None, optimize = True, convex = False)
-        elif loss_type == 'Back_conv':
-            Weak.virtual_labels(p=None, optimize = False, convex = True)
-        elif loss_type == 'Back_opt_conv':
-            Weak.virtual_labels(p=None, optimize = True, convex = True)
-        Data.include_virtual(Weak.v)
-        trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
-    elif loss_type == 'EM':
-        loss_fn = losses.EMLoss(Weak.M)
-        Data.include_weak(Weak.z)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'OSL':
-        loss_fn = losses.OSLCELoss()
-        Data.include_weak(Weak.w)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'LBL':
-        loss_fn = losses.LBLoss_gpt4o(k, beta)
-        Weak.virtual_labels(p=None, optimize = True, convex = True)
-        Data.include_virtual(Weak.v)
-        trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
-    elif loss_type == 'Forward':
-        loss_fn = losses.ForwardLoss_gpt4o(Weak.M)
-        Data.include_weak(Weak.z)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'ForwardBackward_Y':
-        Weak.V_matrix(Data.num_classes)
-        Y = np.linalg.pinv(Weak.M)
-        loss_fn = losses.FBLoss_gpt4o(Weak.M, Y)
-        Data.include_weak(Weak.z)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'ForwardBackward_I':
-        #Weak.V_matrix(Data.num_classes)
-        #Y = np.linalg.pinv(Weak.M)
-        loss_fn = losses.FBLoss_gpt4o(Weak.M, np.identity(Weak.d))
-        Data.include_weak(Weak.z)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    elif loss_type == 'ForwardBackward_V':
-        Weak.V_matrix(Data.num_classes)
-        # Try a non-informative fdirichlet. And try a dirichlet that comes from the pseudoinverse
-        #Y = np.linalg.pinv(Weak.M)
-        loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
-        Data.include_weak(Weak.z)
-        trainloader,testloader = Data.get_dataloader(weak_labels='weak')
-    else:
-        raise ValueError("Invalid loss type. Check the spelling")
 
     overall_results = {}
     overall_models = {}
 
     for i in range(reps):
+            #Reading the mnist dataset so all losses work with the same data
+        f = open(save_dir + f"/Dataset{i}.pkl","rb")
+        Data,Weak = pickle.load(f)
+        f.close()
+
+        # Choose loss function 
+        if loss_type in ['Back','Back_conv','Back_opt','Back_opt_conv']:
+            loss_fn = losses.CELoss()
+            if loss_type == 'Back':
+                Weak.virtual_labels(p=None, optimize = False, convex = False)
+            elif loss_type == 'Back_opt':
+                Weak.virtual_labels(p=None, optimize = True, convex = False)
+            elif loss_type == 'Back_conv':
+                Weak.virtual_labels(p=None, optimize = False, convex = True)
+            elif loss_type == 'Back_opt_conv':
+                Weak.virtual_labels(p=None, optimize = True, convex = True)
+            Data.include_virtual(Weak.v)
+            trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
+        elif loss_type == 'EM':
+            loss_fn = losses.EMLoss(Weak.M)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'OSL':
+            loss_fn = losses.OSLCELoss()
+            Data.include_weak(Weak.w)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'LBL':
+            loss_fn = losses.LBLoss_gpt4o(k, beta)
+            Weak.virtual_labels(p=None, optimize = True, convex = True)
+            Data.include_virtual(Weak.v)
+            trainloader,testloader = Data.get_dataloader(weak_labels='virtual')
+        elif loss_type == 'Forward':
+            loss_fn = losses.ForwardLoss_gpt4o(Weak.M)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_Y':
+            Weak.V_matrix(Data.num_classes)
+            Y = np.linalg.pinv(Weak.M)
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Y)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_I':
+            #Weak.V_matrix(Data.num_classes)
+            #Y = np.linalg.pinv(Weak.M)
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, np.identity(Weak.d))
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_VM':
+            Weak.V_matrix(Data.num_classes,method = 'M')
+
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_VY':
+            Weak.virtual_labels(p=None, optimize = True, convex = True)
+            Weak.V_matrix(Data.num_classes,method = 'Y')
+
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_VsI':
+            Weak.V_matrix(Data.num_classes,method = 'sI')
+
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_VmI':
+            Weak.V_matrix(Data.num_classes,method = 'mI')
+
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        elif loss_type == 'ForwardBackward_VbI':
+            Weak.V_matrix(Data.num_classes,method = 'bI')
+
+            loss_fn = losses.FBLoss_gpt4o(Weak.M, Weak.V)
+            Data.include_weak(Weak.z)
+            trainloader,testloader = Data.get_dataloader(weak_labels='weak')
+        else:
+            raise ValueError("Invalid loss type. Check the spelling")
+
+
         #np_results = {}
         mlp = MLP(Data.num_features, [Data.num_features], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'tanh')
         optim = torch.optim.Adam(mlp.parameters(), lr = lr, betas = betas)
@@ -125,7 +153,8 @@ if __name__ == "__main__":
     parser.add_argument('-e','--epochs', type = int, default = 15, help = 'Number of epochs')
     parser.add_argument('-dp', '--dropout', type = float, default = 0.5, help = 'Dropout probability')
     parser.add_argument('-l','--loss', type = str, default = 'Back', 
-                        choices=['Back','Back_conv','Back_opt','Back_opt_conv','EM','OSL','LBL','Forward','ForwardBackward_I','ForwardBackward_Y','ForwardBackward_V'],
+                        choices=['Back','Back_conv','Back_opt','Back_opt_conv','EM','OSL','LBL','Forward','ForwardBackward_I','ForwardBackward_Y',
+                                 'ForwardBackward_VM','ForwardBackward_VY','ForwardBackward_VsI','ForwardBackward_VmI','ForwardBackward_VbI'],
                         help='Type of loss reconstruction')
     #parser.add_argument('-d', '--save_dir', type = str, default = 'Experimental_results', help = 'Directory to save results')
     parser.add_argument('--pll', type = float, help = 'Probability of corrupted samples in the dataset')

@@ -10,7 +10,7 @@ from models.model import MLP
 
 import pickle
 
-def generate_dataset(path, dataset = 'mnist', batch_size = 16, model_class = 'pll', pll_p = 0.5):
+def generate_dataset(path, dataset = 'mnist', batch_size = 16, model_class = 'pll', pll_p = 0.5, number = None):
     Data = dtset.Torch_Dataset(dataset, batch_size = batch_size)
     Weak = Weakener(Data.num_classes)
     Weak.generate_M(model_class = model_class, pll_p = pll_p)
@@ -18,6 +18,9 @@ def generate_dataset(path, dataset = 'mnist', batch_size = 16, model_class = 'pl
     Weak.generate_weak(train_y) #z and w
 
     Dataset = [Data,Weak]
-    f = open(path +"/Dataset.pkl","wb")
+    if number is None:
+        f = open(path +"/Dataset.pkl","wb")
+    else:
+        f = open(path +f"/Dataset{number}.pkl","wb")
     pickle.dump(Dataset,f)
     f.close()
