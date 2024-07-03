@@ -259,13 +259,16 @@ class EMLoss(nn.Module):
     def __init__(self,M):
         super(EMLoss, self).__init__()
         self.logsoftmax = torch.nn.LogSoftmax(dim=1)
-        self.M = M
+        self.M = torch.tensor(M)
         
     def forward(self,out,z):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logp = self.logsoftmax(out)
 
         p = torch.exp(logp)
-        Q = p.detach() * torch.tensor(self.M[z])
+        M_on_device = self.M.to(out.device)
+        Q = p.detach() * M_on_device[z]
+        #Q = p.detach() * torch.tensor(self.M[z])
         Q /= torch.sum(Q,dim=1,keepdim=True)
 
         L = -torch.sum(Q*logp)
