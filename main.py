@@ -127,7 +127,8 @@ def main(reps, epochs, dropout_p, loss_type, pll_p, k=1, beta=1.2, lr= 5e-2, bet
 
 
         #np_results = {}
-        mlp = MLP(Data.num_features, [Data.num_features], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'tanh')
+        #mlp = MLP(Data.num_features, [Data.num_features], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'tanh')
+        mlp = MLP(Data.num_features, [], Data.num_classes, dropout_p = dropout_p, bn = True, activation = 'relu')
         optim = torch.optim.Adam(mlp.parameters(), lr = lr, betas = betas)
         mlp, results = train_and_evaluate(mlp, trainloader, testloader, optimizer=optim, loss_fn=loss_fn, num_epochs=epochs, sound=1)
         print('Estos son los resultados',results)
