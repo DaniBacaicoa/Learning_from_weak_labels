@@ -8,3 +8,4 @@ openml
 ipykernel
 ucimlrepo
 seaborn
+pandas
